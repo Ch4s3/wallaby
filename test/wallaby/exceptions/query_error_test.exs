@@ -3,52 +3,45 @@ defmodule Wallaby.Exceptions.QueryErrorTest do
 
   import Wallaby.QueryError
 
-  describe "errors/1" do
-    test "only selects the first error" do
-      query = %{errors: [:visible], locator: {:css, "test"}}
-      assert errors(query) |> Enum.count == 1
-    end
-  end
-
   describe "method/1" do
     test "css" do
-      assert method({:css, nil}) == "element with css"
+      assert method(:css) == "element with css"
     end
 
     test "select" do
-      assert method({:select, nil}) == "select"
+      assert method(:select) == "select"
     end
 
     test "fillable fields" do
-      assert method({:fillable_field, nil}) == "text input or textarea"
+      assert method(:fillable_field) == "text input or textarea"
     end
 
     test "checkboxes" do
-      assert method({:checkbox, nil}) == "checkbox"
+      assert method(:checkbox) == "checkbox"
     end
 
     test "radio buttons" do
-      assert method({:radio_button, nil}) == "radio button"
+      assert method(:radio_button) == "radio button"
     end
 
     test "link" do
-      assert method({:link, nil}) == "link"
+      assert method(:link) == "link"
     end
 
     test "xpath" do
-      assert method({:xpath, nil}) == "element with an xpath"
+      assert method(:xpath) == "element with an xpath"
     end
 
     test "buttons" do
-      assert method({:button, nil}) == "button"
+      assert method(:button) == "button"
     end
 
     test "any unspecified locators" do
-      assert method({:random, nil}) == "element"
+      assert method(:random) == "element"
     end
 
     test "file field" do
-      assert method({:file_field, nil}) == "file field"
+      assert method(:file_field) == "file field"
     end
   end
 

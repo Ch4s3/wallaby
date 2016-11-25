@@ -45,7 +45,7 @@ defmodule Wallaby.Session do
   }
 
   alias Wallaby.Phantom.Driver
-  alias Wallaby.Node
+  alias Wallaby.Element
 
   defstruct [:id, :url, :session_url, :server, screenshots: []]
 
@@ -87,7 +87,7 @@ defmodule Wallaby.Session do
   Screenshots are saved to a "screenshots" directory in the same directory the
   tests are run in.
   """
-  @spec take_screenshot(Node.t | t) :: Node.t | t
+  @spec take_screenshot(Element.t | t) :: Element.t | t
 
   def take_screenshot(screenshotable) do
     image_data =
@@ -106,7 +106,7 @@ defmodule Wallaby.Session do
   @spec set_window_size(t, pos_integer, pos_integer) :: t
 
   def set_window_size(session, width, height) do
-    Driver.set_window_size(session, width, height)
+    {:ok, _} = Driver.set_window_size(session, width, height)
     session
   end
 
@@ -116,7 +116,8 @@ defmodule Wallaby.Session do
   @spec get_window_size(t) :: %{String.t => pos_integer, String.t => pos_integer}
 
   def get_window_size(session) do
-    Driver.get_window_size(session)
+    {:ok, size} = Driver.get_window_size(session)
+    size
   end
 
   @doc """
@@ -125,7 +126,8 @@ defmodule Wallaby.Session do
   @spec get_current_url(t) :: String.t
 
   def get_current_url(session) do
-    Driver.current_url(session)
+    {:ok, url} = Driver.current_url(session)
+    url
   end
 
   @doc """
@@ -138,12 +140,13 @@ defmodule Wallaby.Session do
   end
 
   @doc """
-  Gets the title for the current page
+  Gets the title for the current page
   """
   @spec page_title(t) :: String.t
 
   def page_title(session) do
-    Driver.page_title(session)
+    {:ok, title} = Driver.page_title(session)
+    title
   end
 
   @doc """
@@ -153,7 +156,8 @@ defmodule Wallaby.Session do
   @spec execute_script(t, String.t, list) :: t
 
   def execute_script(session, script, arguments \\ []) do
-    Driver.execute_script(session, script, arguments)
+    {:ok, value} = Driver.execute_script(session, script, arguments)
+    value
   end
 
   @doc """
@@ -171,7 +175,7 @@ defmodule Wallaby.Session do
   @spec send_keys(t, list(atom)) :: t
 
   def send_keys(session, keys) when is_list(keys) do
-    Driver.send_keys(session, keys)
+    {:ok, _} = Driver.send_keys(session, keys)
     session
   end
 
@@ -181,7 +185,7 @@ defmodule Wallaby.Session do
   @spec send_text(t, String.t) :: t
 
   def send_text(session, text) do
-    Driver.send_text(session, text)
+    {:ok, _} = Driver.send_text(session, text)
     session
   end
 
@@ -191,7 +195,8 @@ defmodule Wallaby.Session do
   @spec page_source(t) :: String.t
 
   def page_source(session) do
-    Driver.page_source(session)
+    {:ok, source} = Driver.page_source(session)
+    source
   end
 
   defp request_url(path) do

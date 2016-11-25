@@ -1,35 +1,35 @@
 defmodule Wallaby.Actions.ChooseTest do
   use Wallaby.SessionCase, async: true
 
-  setup %{session: session, server: server} do
+  setup %{session: session} do
     page =
       session
-      |> visit(server.base_url <> "forms.html")
+      |> visit("forms.html")
 
     {:ok, page: page}
   end
 
   test "choosing a radio button", %{page: page} do
-    refute find(page, "#option2") |> checked?
+    refute find(page, "#option2") |> Element.checked?
 
     page
     |> choose("option2")
 
-    assert find(page, "#option2") |> checked?
+    assert find(page, "#option2") |> Element.checked?
   end
 
   test "choosing a radio button unchecks other buttons in the group", %{page: page} do
     page
     |> choose("Option 1")
     |> find("#option1")
-    |> checked?
+    |> Element.checked?
     |> assert
 
     page
     |> choose("option2")
 
-    refute find(page, "#option1") |> checked?
-    assert find(page, "#option2") |> checked?
+    refute find(page, "#option1") |> Element.checked?
+    assert find(page, "#option2") |> Element.checked?
   end
 
   test "choosing a radio button returns the parent", %{page: page} do
@@ -37,7 +37,7 @@ defmodule Wallaby.Actions.ChooseTest do
     |> choose("Option 1")
     |> choose("option2")
 
-    assert find(page, "#option2") |> checked?
+    assert find(page, "#option2") |> Element.checked?
   end
 
   test "throw an error if a label exists but does not have a for attribute", %{page: page} do

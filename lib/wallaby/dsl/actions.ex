@@ -3,7 +3,7 @@ defmodule Wallaby.DSL.Actions do
   Provides the action DSL.
 
   Actions are used to interact with form elements. They follow the same
-  conventions as Wallaby.Node.Query. Form elements can be found based on
+  conventions as Wallaby.StatelessQuery. Form elements can be found based on
   their id, name, or label text:
 
   ```html
@@ -34,7 +34,7 @@ defmodule Wallaby.DSL.Actions do
   attach_file(page, "Avatar", path: "test/fixtures/avatar.jpg")
   ```
 
-  Actions return their parent node so that they can be chained together:
+  Actions return their parent element so that they can be chained together:
 
   ```
   page
@@ -45,79 +45,95 @@ defmodule Wallaby.DSL.Actions do
   ```
   """
 
-  alias Wallaby.Node
+  alias Wallaby.Element
+  alias Wallaby.StatelessQuery
+  alias Wallaby.Browser
 
-  @type parent :: Wallaby.Node.Query.parent
-  @type locator :: Wallaby.Node.Query.locator
-  @type opts :: Wallaby.Node.Query.opts
+  @type parent :: Wallaby.StatelessQuery.parent
+  @type locator :: Wallaby.StatelessQuery.locator
+  @type opts :: Wallaby.StatelessQuery.opts
 
   @doc """
-  Fills in a "fillable" node with text. Input nodes are looked up by id, label text,
+  Fills in a "fillable" element with text. Input elements are looked up by id, label text,
   or name.
   """
   @spec fill_in(parent, locator, opts) :: parent
+  # @spec fill_in(Element.t, [with: String.t]) :: Element.t
 
   def fill_in(parent, locator, [{:with, value} | _]=opts) when is_binary(value) do
     parent
-    |> Node.Query.fillable_field(locator, opts)
-    |> Node.fill_in(with: value)
+    |> Browser.find(StatelessQuery.fillable_field(locator, opts))
+    |> fill_in(with: value)
 
     parent
   end
   def fill_in(parent, locator, [{:with, value} | _]=opts) when is_number(value) do
     fill_in(parent, locator,  Keyword.merge(opts, [with: to_string(value)]))
   end
+  def fill_in(%Element{}=element, with: value) when is_binary(value) do
+    element
+    |> Element.clear
+    |> Element.set_value(value)
+
+    element
+  end
 
   @doc """
-  Chooses a radio button based on id, label text, or name.
+  Chooses a radio button based on id, label text, or name.
   """
   @spec choose(parent, locator, opts) :: parent
+  # @spec choose(Element.t) :: Element.t
 
   def choose(parent, locator, opts\\[]) when is_binary(locator) do
     parent
-    |> Node.Query.radio_button(locator, opts)
-    |> Node.click
+    |> Browser.find(StatelessQuery.radio_button(locator, opts))
+    |> Element.click
 
     parent
   end
+  def choose(%Element{}=element) do
+    Element.click(element)
+  end
 
   @doc """
-  Checks a checkbox based on id, label text, or name.
+  Checks a checkbox based on id, label text, or name.
   """
   @spec check(parent, locator, opts) :: parent
+  # @spec check(Element.t) :: Element.t
 
   def check(parent, locator, opts\\[]) do
     parent
-    |> Node.Query.checkbox(locator, opts)
-    |> Node.check
+    |> Browser.find(StatelessQuery.checkbox(locator, opts))
+    |> Element.check
 
     parent
   end
 
   @doc """
-  Unchecks a checkbox based on id, label text, or name.
+  Unchecks a checkbox based on id, label text, or name.
   """
   @spec uncheck(parent, locator, opts) :: parent
+  # @spec uncheck(t) :: t
 
   def uncheck(parent, locator, opts\\[]) do
     parent
-    |> Node.Query.checkbox(locator, opts)
-    |> Node.uncheck
+    |> Browser.find(StatelessQuery.checkbox(locator, opts))
+    |> Element.uncheck
 
     parent
   end
 
   @doc """
-  Selects an option from a select box. The select box can be found by id, label
+  Selects an option from a select box. The select box can be found by id, label
   text, or name. The option can be found by its text.
   """
   @spec select(parent, locator, option: String.t) :: parent
 
   def select(parent, locator, [option: option_text]=opts) do
     parent
-    |> Node.Query.select(locator, opts)
-    |> Node.Query.option(option_text, [])
-    |> Node.click
+    |> Browser.find(StatelessQuery.select(locator, opts))
+    |> Browser.find(StatelessQuery.option(option_text, []))
+    |> Element.click
 
     parent
   end
@@ -129,8 +145,8 @@ defmodule Wallaby.DSL.Actions do
 
   def click_link(parent, locator, opts\\[]) do
     parent
-    |> Node.Query.link(locator, opts)
-    |> Node.click
+    |> Browser.find(StatelessQuery.link(locator, opts))
+    |> Element.click
 
     parent
   end
@@ -142,14 +158,14 @@ defmodule Wallaby.DSL.Actions do
 
   def click_button(parent, locator, opts\\[]) do
     parent
-    |> Node.Query.button(locator, opts)
-    |> Node.click
+    |> Browser.find(StatelessQuery.button(locator, opts))
+    |> Element.click
 
     parent
   end
 
   @doc """
-  Clicks on the matching button. Alias for `click_button`.
+  Clicks on the matching button. Alias for `click_button`.
   """
   @spec click_on(parent, locator, opts) :: parent
 
@@ -158,8 +174,8 @@ defmodule Wallaby.DSL.Actions do
   end
 
   # @doc """
-  # Clears an input field. Input nodes are looked up by id, label text, or name.
-  # The node can also be passed in directly.
+  # Clears an input field. Input elements are looked up by id, label text, or name.
+  # The element can also be passed in directly.
   # """
   # @spec clear(Session.t, query) :: Session.t
   # def clear(session, query) when is_binary(query) do
@@ -169,7 +185,7 @@ defmodule Wallaby.DSL.Actions do
   # end
 
   @doc """
-  Attaches a file to a file input. Input nodes are looked up by id, label text,
+  Attaches a file to a file input. Input elements are looked up by id, label text,
   or name.
   """
   @spec attach_file(parent, locator, opts) :: parent
@@ -178,8 +194,8 @@ defmodule Wallaby.DSL.Actions do
     path = :filename.absname(value)
 
     parent
-    |> Node.Query.file_field(locator, opts)
-    |> Node.fill_in(with: path)
+    |> Browser.find(StatelessQuery.file_field(locator, opts))
+    |> fill_in(with: path)
 
     parent
   end

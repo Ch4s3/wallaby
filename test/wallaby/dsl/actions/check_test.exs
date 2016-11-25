@@ -1,65 +1,65 @@
 defmodule Wallaby.DSL.Actions.CheckTest do
   use Wallaby.SessionCase, async: true
 
-  setup %{session: session, server: server} do
+  setup %{session: session} do
     page =
       session
-      |> visit(server.base_url <> "forms.html")
+      |> visit("forms.html")
 
     {:ok, page: page}
   end
 
-  test "check/1 checks the specified node", %{page: page} do
+  test "check/1 checks the specified element", %{page: page} do
     checkbox =
       page
       |> find("#checkbox1")
 
-    check checkbox
-    assert checked?(checkbox)
-    uncheck checkbox
-    refute checked?(checkbox)
+    Element.check checkbox
+    assert Element.checked?(checkbox)
+    Element.uncheck checkbox
+    refute Element.checked?(checkbox)
   end
 
-  test "check/2 does not uncheck the node if called twice", %{page: page} do
+  test "check/2 does not uncheck the element if called twice", %{page: page} do
     page
     |> check("Checkbox 1")
     |> check("Checkbox 1")
 
-    assert find(page, "#checkbox1") |> checked?
+    assert find(page, "#checkbox1") |> Element.checked?
   end
 
-  test "uncheck/2 does not check the node", %{page: page} do
+  test "uncheck/2 does not check the element", %{page: page} do
     page
     |> uncheck("Checkbox 1")
 
-    refute find(page, "#checkbox1") |> checked?
+    refute find(page, "#checkbox1") |> Element.checked?
   end
 
-  test "check/2 finds the node by label", %{page: page} do
+  test "check/2 finds the element by label", %{page: page} do
     page
     |> check("Checkbox 1")
 
-    assert find(page, "#checkbox1") |> checked?
+    assert find(page, "#checkbox1") |> Element.checked?
     uncheck(page, "Checkbox 1")
-    refute find(page, "#checkbox1") |> checked?
+    refute find(page, "#checkbox1") |> Element.checked?
   end
 
-  test "check/2 finds the node by id", %{page: page} do
+  test "check/2 finds the element by id", %{page: page} do
     page
     |> check("checkbox1")
 
-    assert find(page, "#checkbox1") |> checked?
+    assert find(page, "#checkbox1") |> Element.checked?
     uncheck(page, "checkbox1")
-    refute find(page, "#checkbox1") |> checked?
+    refute find(page, "#checkbox1") |> Element.checked?
   end
 
-  test "check/2 finds the node by name", %{page: page} do
+  test "check/2 finds the element by name", %{page: page} do
     page
     |> check("testbox")
 
-    assert find(page, "#checkbox1") |> checked?
+    assert find(page, "#checkbox1") |> Element.checked?
     uncheck(page, "testbox")
-    refute find(page, "#checkbox1") |> checked?
+    refute find(page, "#checkbox1") |> Element.checked?
   end
 
   test "throw an error if a label exists but does not have a for attribute", %{page: page} do

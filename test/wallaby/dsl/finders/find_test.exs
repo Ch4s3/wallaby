@@ -1,19 +1,19 @@
 defmodule Wallaby.DSL.Finders.FindTest do
   use Wallaby.SessionCase, async: true
 
-  setup %{session: session, server: server} do
+  setup %{session: session} do
     page =
       session
-      |> visit(server.base_url <> "forms.html")
+      |> visit("forms.html")
 
     {:ok, page: page}
   end
 
   describe "find/3" do
-    setup %{session: session, server: server} do
+    setup %{session: session} do
       page =
         session
-        |> visit(server.base_url <> "page_1.html")
+        |> visit("page_1.html")
 
       {:ok, page: page}
     end
@@ -38,7 +38,7 @@ defmodule Wallaby.DSL.Finders.FindTest do
 
     test "throws a not found error if the xpath could not be found", %{page: page} do
       assert_raise Wallaby.QueryError, "Could not find any visible element with an xpath that matched: '//test-element'", fn ->
-        find page, {:xpath, "//test-element"}
+        find page, xpath("//test-element")
       end
     end
 

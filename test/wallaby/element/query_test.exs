@@ -1,12 +1,12 @@
-defmodule Wallaby.Node.QueryTest do
+defmodule Wallaby.Element.QueryTest do
   use Wallaby.SessionCase, async: true
 
-  alias Wallaby.Node
-  alias Wallaby.Node.Query
+  alias Wallaby.Element
+  alias Wallaby.Element.Query
 
   describe "build_query/3" do
     test "assigns the parent of the query" do
-      parent = %Node{}
+      parent = %Element{}
       locator = {:css, ".user"}
       query = Query.build_query(parent, locator, [])
 
@@ -14,7 +14,7 @@ defmodule Wallaby.Node.QueryTest do
     end
 
     test "builds the correct locator" do
-      parent = %Node{}
+      parent = %Element{}
       locator = {:css, ".user"}
       query = Query.build_query(parent, locator, [])
 
@@ -22,7 +22,7 @@ defmodule Wallaby.Node.QueryTest do
     end
 
     test "merges default conditions" do
-      parent = %Node{}
+      parent = %Element{}
       locator = {:css, ".user"}
       query = Query.build_query(parent, locator, [])
 
@@ -30,7 +30,7 @@ defmodule Wallaby.Node.QueryTest do
     end
 
     test "doesn't override user specified conditions" do
-      parent = %Node{}
+      parent = %Element{}
       locator = {:css, ".user"}
       query = Query.build_query(parent, locator, [visible: false, count: :any])
 
@@ -38,7 +38,7 @@ defmodule Wallaby.Node.QueryTest do
     end
 
     test "defaults to no errors" do
-      parent = %Node{}
+      parent = %Element{}
       locator = {:css, ".user"}
       query = Query.build_query(parent, locator, [visible: false, count: :any])
 

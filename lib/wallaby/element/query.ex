@@ -1,8 +1,8 @@
-defmodule Wallaby.Node.Query do
+defmodule Wallaby.Element.Query do
   @moduledoc ~S"""
   Provides the query DSL.
 
-  Queries are used to locate and retrieve DOM nodes. The standard method for
+  Queries are used to locate and retrieve DOM elements. The standard method for
   querying is css selectors:
 
   ```
@@ -46,7 +46,7 @@ defmodule Wallaby.Node.Query do
     * `:text` - Text that should be found inside the element.
   """
 
-  alias Wallaby.{Node, Session}
+  alias Wallaby.{Element, Session}
   alias Wallaby.Phantom.Driver
   alias Wallaby.XPath
   alias __MODULE__
@@ -70,11 +70,11 @@ defmodule Wallaby.Node.Query do
     errors: errors,
   }
 
-  @type parent :: Wallaby.Node.t | Wallaby.Session.t
+  @type parent :: Wallaby.Element.t | Wallaby.Session.t
   @type locator :: String.t | {atom(), String.t}
   @type query :: {atom(), String.t}
   @type opts :: list()
-  @type result :: list(Node.t) | Node.t
+  @type result :: list(Element.t) | Element.t
   @type errors :: list()
 
   @doc """
@@ -92,13 +92,13 @@ defmodule Wallaby.Node.Query do
   end
 
   @doc """
-  Finds a specific DOM node on the page based on a css selector. Blocks until
-  it either finds the node or until the max time is reached. By default only
-  1 node is expected to match the query. If more nodes are present then a
-  count can be specified. By default only nodes that are visible on the page
+  Finds a specific DOM element on the page based on a css selector. Blocks until
+  it either finds the element or until the max time is reached. By default only
+  1 element is expected to match the query. If more elements are present then a
+  count can be specified. By default only elements that are visible on the page
   are returned.
 
-  Selections can be scoped by providing a Node as the locator for the query.
+  Selections can be scoped by providing a Element as the locator for the query.
 
   ## Options
 
@@ -112,22 +112,22 @@ defmodule Wallaby.Node.Query do
 
   def find(parent, selector, opts) do
     case find_element(parent, selector, opts) do
-      {:ok, elements} ->
-        elements
+      {:ok, query} ->
+        query.result
       {:error, query} ->
         handle_error(query)
     end
   end
 
   @doc """
-  Finds all of the DOM nodes that match the css selector. If no elements are
+  Finds all of the DOM elements that match the css selector. If no elements are
   found then an empty list is immediately returned.
 
   ## Options
 
   See the "Query Options" section in the module documentation
   """
-  @spec all(parent, locator, opts) :: list(Node.t)
+  @spec all(parent, locator, opts) :: list(Element.t)
 
   def all(parent, locator, opts) when is_binary(locator) do
     all(parent, {:css, locator}, opts)
@@ -135,8 +135,8 @@ defmodule Wallaby.Node.Query do
 
   def all(parent, selector, opts) do
     case find_elements(parent, selector, opts) do
-      {:ok, elements} ->
-        elements
+      {:ok, query} ->
+        query.result
       {:error, query} ->
         handle_error(query)
     end
@@ -249,8 +249,8 @@ defmodule Wallaby.Node.Query do
 
   defp find_field(parent, query, opts) do
     case find_element(parent, query, opts) do
-      {:ok, elements} ->
-        elements
+      {:ok, query} ->
+        query.result
       {:error, query} ->
         if not_found?(query) do
           query
@@ -272,11 +272,19 @@ defmodule Wallaby.Node.Query do
     query = build_query(parent, locator, opts)
 
     retry fn ->
+      {:ok, results} = Driver.find_elements(query)
+      query = add_results(query, results)
+
       query
-      |> Driver.find_elements
       |> assert_text
       |> assert_visibility
       |> assert_count
+
+      if Enum.any?(query.errors) do
+        {:error, query.errors}
+      else
+        {:ok, query.result}
+      end
     end
   end
 
@@ -284,11 +292,17 @@ defmodule Wallaby.Node.Query do
     query = build_query(parent, locator, opts)
 
     retry fn ->
+      {:ok, results} = Driver.find_elements(query)
+      query = add_results(query, results)
+
       query
-      |> Driver.find_elements
       |> assert_text
       |> assert_visibility
     end
+  end
+
+  defp add_results(query, elements) do
+    %Query{ query | result: elements}
   end
 
   defp check_for_bad_html(%Query{locator: {:button, locator}}=query) do
@@ -316,37 +330,37 @@ defmodule Wallaby.Node.Query do
       Enum.any?(labels, &(missing_for?(&1) && matching_text?(&1, text))) ->
         add_error(query, :label_with_no_for)
       label=Enum.find(labels, &matching_text?(&1, text)) ->
-        add_error(query, {:label_does_not_find_field, Node.attr(label, "for")})
+        add_error(query, {:label_does_not_find_field, Element.attr(label, "for")})
       true  ->
         add_error(query, :not_found)
     end
   end
 
-  defp missing_for?(node) do
-    Node.attr(node, "for") == nil
+  defp missing_for?(element) do
+    Element.attr(element, "for") == nil
   end
 
-  defp matching_text?(node, locator) do
-    Node.text(node) =~ ~r/#{Regex.escape(locator)}/
+  defp matching_text?(element, locator) do
+    Element.text(element) =~ ~r/#{Regex.escape(locator)}/
   end
 
-  defp assert_text(%Query{result: nodes, conditions: opts}=query) do
+  defp assert_text(%Query{result: elements, conditions: opts}=query) do
     text = Keyword.get(opts, :text)
 
     if text do
-      %Query{query | result: Enum.filter(nodes, &matching_text?(&1, text))}
+      %Query{query | result: Enum.filter(elements, &matching_text?(&1, text))}
     else
       query
     end
   end
 
-  defp assert_visibility(%Query{result: nodes, conditions: opts}=query) do
+  defp assert_visibility(%Query{result: elements, conditions: opts}=query) do
     visible = Keyword.get(opts, :visible)
 
     cond do
-      visible && Enum.all?(nodes, &(Node.visible?(&1))) ->
+      visible && Enum.all?(elements, &(Element.visible?(&1))) ->
         query
-      !visible && Enum.all?(nodes, &(!Node.visible?(&1))) ->
+      !visible && Enum.all?(elements, &(!Element.visible?(&1))) ->
         query
       visible ->
         add_error(query, :not_visible)
@@ -355,47 +369,53 @@ defmodule Wallaby.Node.Query do
     end
   end
 
-  defp assert_count(%Query{result: nodes, conditions: opts}=query) do
+  defp assert_count(%Query{result: elements, conditions: opts}=query) do
     count = Keyword.get(opts, :count)
 
     cond do
-      count == 1    && length(nodes) == 1 -> %Query{query | result: hd(nodes)}
-      count == :any && length(nodes) > 0  -> query
-      count == length(nodes)              -> query
-      count == 0    && length(nodes) > 0  -> add_error(query, :found)
-      length(nodes) == 0                  -> add_error(query, :not_found)
+      count == 1    && length(elements) == 1 -> %Query{query | result: hd(elements)}
+      count == :any && length(elements) > 0  -> query
+      count == length(elements)              -> query
+      count == 0    && length(elements) > 0  -> add_error(query, :found)
+      length(elements) == 0                  -> add_error(query, :not_found)
       true                                -> add_error(query, :ambiguous)
     end
   end
 
   defp add_error(query, error) do
-    %Query{query | errors: [error | query.errors]}
+    %Query{ query | errors: query.errors ++ [error] }
   end
 
   defp handle_error(query) do
-    if Wallaby.screenshot_on_failure? do
-      Session.take_screenshot(query.parent)
-    end
-
     raise Wallaby.QueryError, query
   end
 
-  defp retry(find_fn, start_time \\ :erlang.monotonic_time(:milli_seconds)) do
-    query = find_fn.()
+  defp cleanup(query) do
+    if Wallaby.screenshot_on_failure? do
+      Session.take_screenshot(query.parent)
+    end
+  end
 
-    cond do
-      query.errors == [] ->
-        {:ok, query.result}
-      true ->
+  def retry(find_fn, start_time \\ current_time) do
+    case find_fn.() do
+      {:ok, result} ->
+        {:ok, result}
+      {:error, :stale_reference} ->
+        retry(find_fn, start_time)
+      {:error, e} ->
         cond do
-          max_time_exceeded?(start_time) -> retry(find_fn, start_time)
-          true                           -> {:error, query}
+          max_time_exceeded?(start_time) -> {:error, e}
+          true -> retry(find_fn, start_time)
         end
     end
   end
 
   def max_time_exceeded?(start_time) do
-    :erlang.monotonic_time(:milli_seconds) - start_time < max_wait_time
+    current_time - start_time > max_wait_time
+  end
+
+  def current_time do
+    :erlang.monotonic_time(:milli_seconds)
   end
 
   defp max_wait_time do
