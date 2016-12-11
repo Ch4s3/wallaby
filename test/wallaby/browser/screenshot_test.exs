@@ -1,4 +1,4 @@
-defmodule Wallaby.Session.ScreenshotTest do
+defmodule Wallaby.Browser.ScreenshotTest do
   use Wallaby.SessionCase, async: false
 
   setup %{session: session} do

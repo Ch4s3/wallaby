@@ -2,6 +2,7 @@ defmodule Wallaby.Browser do
   alias Wallaby.Element
   alias Wallaby.Phantom.Driver
   alias Wallaby.StatelessQuery
+  alias Wallaby.StatelessQuery.ErrorMessage
   alias Wallaby.Session
 
   @default_max_wait_time 3_000
@@ -40,30 +41,27 @@ defmodule Wallaby.Browser do
     case execute_query(parent, query) do
       {:ok, query} ->
         StatelessQuery.result(query)
-      {:error, e} ->
+
+      {:error, {:not_found, result}} ->
+        query = %StatelessQuery{query | result: result}
+
         if Wallaby.screenshot_on_failure? do
           Session.take_screenshot(parent)
         end
 
         case validate_html(parent, query) do
           {:ok, _} ->
-            raise Wallaby.QueryError, {query, e}
+            raise Wallaby.QueryError, ErrorMessage.message(query, :not_found)
           {:error, html_error} ->
-            raise Wallaby.QueryError, {query, html_error}
+            raise Wallaby.QueryError, ErrorMessage.message(query, html_error)
         end
-    end
-  end
 
-  defp execute_query(parent, query) do
-    retry fn ->
-      # TODO: Extract a few pieces of this logic so we dont' recompute them
-      with {:ok, query}  <- StatelessQuery.validate(query),
-           {method, selector} <- StatelessQuery.compile(query),
-           {:ok, elements} <- Driver.find_elements(parent, {method, selector}),
-           {:ok, elements} <- validate_visibility(query, elements),
-           {:ok, elements} <- validate_text(query, elements),
-           {:ok, elements} <- validate_count(query, elements),
-       do: {:ok, %StatelessQuery{query | result: elements}}
+      {:error, e} ->
+        if Wallaby.screenshot_on_failure? do
+          Session.take_screenshot(parent)
+        end
+
+        raise Wallaby.QueryError, ErrorMessage.message(query, e)
     end
   end
 
@@ -185,7 +183,7 @@ defmodule Wallaby.Browser do
       StatelessQuery.matches_count?(query, Enum.count(elements)) ->
         {:ok, elements}
       true ->
-        {:error, :not_found}
+        {:error, {:not_found, elements}}
     end
   end
 
@@ -205,6 +203,19 @@ defmodule Wallaby.Browser do
         element_text =~ ~r/#{Regex.escape(text)}/
       {:error, _} ->
         false
+    end
+  end
+
+  defp execute_query(parent, query) do
+    retry fn ->
+      # TODO: Extract a few pieces of this logic so we dont' recompute them
+      with {:ok, query}  <- StatelessQuery.validate(query),
+           {method, selector} <- StatelessQuery.compile(query),
+           {:ok, elements} <- Driver.find_elements(parent, {method, selector}),
+           {:ok, elements} <- validate_visibility(query, elements),
+           {:ok, elements} <- validate_text(query, elements),
+           {:ok, elements} <- validate_count(query, elements),
+       do: {:ok, %StatelessQuery{query | result: elements}}
     end
   end
 

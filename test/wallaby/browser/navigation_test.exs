@@ -1,4 +1,4 @@
-defmodule Wallaby.Session.NavigationTest do
+defmodule Wallaby.Browser.NavigationTest do
   use Wallaby.SessionCase, async: false
 
   test "navigating by path only", %{session: session} do

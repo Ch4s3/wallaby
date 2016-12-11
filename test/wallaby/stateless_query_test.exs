@@ -242,5 +242,11 @@ defmodule Wallaby.StatelessQueryTest do
       refute StatelessQuery.matches_count?(query, 0)
     end
   end
-end
 
+  describe "validate/1" do
+    test "when minimum is less then the maximum" do
+      query = StatelessQuery.css("#test", minimum: 5, maximum: 3)
+      assert StatelessQuery.validate(query) == {:error, :min_max}
+    end
+  end
+end

@@ -17,6 +17,9 @@ defmodule Wallaby.StatelessQuery do
                 | :select
                 | :file_field
 
+  @type t :: %__MODULE__{
+  }
+
   alias __MODULE__
   alias Wallaby.XPath
 
@@ -118,9 +121,12 @@ defmodule Wallaby.StatelessQuery do
 
   def validate(query) do
     # TODO: This should be handled with xpath if we avoid throwing the error.
-    if !StatelessQuery.visible?(query) && StatelessQuery.inner_text(query) do
+    cond do
+    query.conditions[:minimum] > query.conditions[:maximum] ->
+      {:error, :min_max}
+    !StatelessQuery.visible?(query) && StatelessQuery.inner_text(query) ->
       {:error, :cannot_set_text_with_invisible_elements}
-    else
+    true ->
       {:ok, query}
     end
   end
@@ -200,4 +206,3 @@ defmodule Wallaby.StatelessQuery do
     end
   end
 end
-

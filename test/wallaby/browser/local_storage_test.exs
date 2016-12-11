@@ -1,4 +1,4 @@
-defmodule Wallaby.Integration.LocalStorageTest do
+defmodule Wallaby.Browser.LocalStorageTest do
   use ExUnit.Case, async: false
 
   use Wallaby.DSL

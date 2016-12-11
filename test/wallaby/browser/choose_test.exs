@@ -1,4 +1,4 @@
-defmodule Wallaby.Actions.ChooseTest do
+defmodule Wallaby.Browser.ChooseTest do
   use Wallaby.SessionCase, async: true
 
   setup %{session: session} do

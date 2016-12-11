@@ -1,4 +1,4 @@
-defmodule Wallaby.DSL.Actions.ClickButtonTest do
+defmodule Wallaby.Browser.Actions.ClickButtonTest do
   use Wallaby.SessionCase, async: true
 
   alias Wallaby.StatelessQuery
@@ -247,32 +247,19 @@ defmodule Wallaby.DSL.Actions.ClickButtonTest do
   end
 
   test "throws an error if the button does not include a valid type attribute", %{page: page} do
-    msg = Wallaby.QueryError.error_message(
-      :button_with_bad_type,
-      %{method: :button, selector: "button with bad type"})
-    assert_raise Wallaby.QueryError, msg, fn ->
+    assert_raise Wallaby.QueryError, ~r/button has an invalid 'type'/, fn ->
       click_button(page, "button with bad type", [])
     end
   end
 
   test "throws an error if clicking on an input with no type", %{page: page} do
-    msg = Wallaby.QueryError.error_message(
-      :not_found,
-      %{method: :button, selector: "input-no-type",
-       conditions: [count: 1, visible: true]})
-
-    assert_raise Wallaby.QueryError, msg, fn ->
+    assert_raise Wallaby.QueryError, ~r/Expected (.*) 1/, fn ->
       click_button(page, "input-no-type", [])
     end
   end
 
-  @tag :focus
   test "throws an error if the button cannot be found on the page", %{page: page} do
-    msg =
-      Wallaby.QueryError.error_message(:not_found,
-       StatelessQuery.button("unfound button", count: 1, visible: true))
-
-    assert_raise Wallaby.QueryError, msg, fn ->
+    assert_raise Wallaby.QueryError, ~r/Expected (.*) 1/, fn ->
       click_button(page, "unfound button", [])
     end
   end

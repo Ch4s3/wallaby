@@ -2,31 +2,6 @@ defmodule Wallaby.ElementTest do
   use Wallaby.SessionCase, async: true
   use Wallaby.DSL
 
-  test "can find an element on a page", %{session: session} do
-    element =
-      session
-      |> visit("/")
-      |> find("#header")
-
-    assert element
-  end
-
-  test "finding nonexistent elements raises an exception", %{session: session} do
-    assert_raise Wallaby.QueryError, fn ->
-      session
-      |> visit("/")
-      |> find("#not-there")
-    end
-  end
-
-  test "ambiguous queries raise an exception", %{session: session} do
-    assert_raise Wallaby.QueryError, fn ->
-      session
-      |> visit("/")
-      |> find("a")
-    end
-  end
-
   test "can query for multiple elements", %{session: session} do
     elements =
       session

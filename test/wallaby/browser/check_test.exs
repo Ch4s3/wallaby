@@ -1,4 +1,4 @@
-defmodule Wallaby.DSL.Actions.CheckTest do
+defmodule Wallaby.Browser.CheckTest do
   use Wallaby.SessionCase, async: true
 
   setup %{session: session} do

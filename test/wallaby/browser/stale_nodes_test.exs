@@ -1,4 +1,4 @@
-defmodule Wallaby.DSL.Finders.StaleElementsTest do
+defmodule Wallaby.Browser.StaleElementsTest do
   use Wallaby.SessionCase, async: true
 
   describe "when a DOM element becomes stale" do

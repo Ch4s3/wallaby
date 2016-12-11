@@ -1,4 +1,4 @@
-defmodule Wallaby.DSL.Finders.FindTest do
+defmodule Wallaby.Browser.FindTest do
   use Wallaby.SessionCase, async: true
 
   setup %{session: session} do
@@ -18,31 +18,39 @@ defmodule Wallaby.DSL.Finders.FindTest do
       {:ok, page: page}
     end
 
-    test "throws errors if element should not be visible", %{page: page} do
-      assert_raise Wallaby.QueryError, fn ->
-        find(page, "#visible", visible: false)
-      end
+    test "can find an element on a page", %{session: session} do
+      element =
+        session
+        |> find(".blue")
+
+      assert element
     end
 
     test "throws a not found error if the element could not be found", %{page: page} do
-      assert_raise Wallaby.QueryError, "Could not find any visible button that matched: 'Test Button'", fn ->
-        click_on page, "Test Button"
-      end
-    end
-
-    test "throws a not found error if the css could not be found", %{page: page} do
-      assert_raise Wallaby.QueryError, "Could not find any visible element with css that matched: '.test-css'", fn ->
-        find page, ".test-css"
+      assert_raise Wallaby.QueryError, ~r/Expected to find/, fn ->
+        find(page, css("#not-there"))
       end
     end
 
     test "throws a not found error if the xpath could not be found", %{page: page} do
-      assert_raise Wallaby.QueryError, "Could not find any visible element with an xpath that matched: '//test-element'", fn ->
+      assert_raise Wallaby.QueryError, ~r/Expected (.*) xpath '\/\/test-element'/, fn ->
         find page, xpath("//test-element")
       end
     end
 
-    test "find/3 finds invisible elements", %{page: page} do
+    test "ambiguous queries raise an exception", %{page: page} do
+      assert_raise Wallaby.QueryError, ~r/Expected (.*) 1(.*) but 5/, fn ->
+        find page, css(".user")
+      end
+    end
+
+    test "throws errors if element should not be visible", %{page: page} do
+      assert_raise Wallaby.QueryError, ~r/invisible/, fn ->
+        find(page, "#visible", visible: false)
+      end
+    end
+
+    test "finds invisible elements", %{page: page} do
       assert find(page, "#invisible", visible: false)
     end
 
