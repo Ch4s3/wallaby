@@ -14,10 +14,10 @@ defmodule Wallaby.Browser.CheckTest do
       page
       |> find("#checkbox1")
 
-    Element.check checkbox
-    assert Element.checked?(checkbox)
-    Element.uncheck checkbox
-    refute Element.checked?(checkbox)
+    check checkbox
+    assert checked?(checkbox)
+    uncheck checkbox
+    refute checked?(checkbox)
   end
 
   test "check/2 does not uncheck the element if called twice", %{page: page} do
@@ -25,41 +25,41 @@ defmodule Wallaby.Browser.CheckTest do
     |> check("Checkbox 1")
     |> check("Checkbox 1")
 
-    assert find(page, "#checkbox1") |> Element.checked?
+    assert find(page, "#checkbox1") |> checked?
   end
 
   test "uncheck/2 does not check the element", %{page: page} do
     page
     |> uncheck("Checkbox 1")
 
-    refute find(page, "#checkbox1") |> Element.checked?
+    refute find(page, "#checkbox1") |> checked?
   end
 
   test "check/2 finds the element by label", %{page: page} do
     page
     |> check("Checkbox 1")
 
-    assert find(page, "#checkbox1") |> Element.checked?
+    assert find(page, "#checkbox1") |> checked?
     uncheck(page, "Checkbox 1")
-    refute find(page, "#checkbox1") |> Element.checked?
+    refute find(page, "#checkbox1") |> checked?
   end
 
   test "check/2 finds the element by id", %{page: page} do
     page
     |> check("checkbox1")
 
-    assert find(page, "#checkbox1") |> Element.checked?
+    assert find(page, "#checkbox1") |> checked?
     uncheck(page, "checkbox1")
-    refute find(page, "#checkbox1") |> Element.checked?
+    refute find(page, "#checkbox1") |> checked?
   end
 
   test "check/2 finds the element by name", %{page: page} do
     page
     |> check("testbox")
 
-    assert find(page, "#checkbox1") |> Element.checked?
+    assert find(page, "#checkbox1") |> checked?
     uncheck(page, "testbox")
-    refute find(page, "#checkbox1") |> Element.checked?
+    refute find(page, "#checkbox1") |> checked?
   end
 
   test "throw an error if a label exists but does not have a for attribute", %{page: page} do

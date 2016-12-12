@@ -5,6 +5,12 @@ defmodule Wallaby.Browser do
   alias Wallaby.StatelessQuery.ErrorMessage
   alias Wallaby.Session
 
+  @type t :: any()
+
+  @type parent :: Wallaby.StatelessQuery.parent()
+  @type locator :: Wallaby.StatelessQuery.locator()
+  @type opts :: Wallaby.StatelessQuery.opts()
+
   @default_max_wait_time 3_000
 
   def retry(f, start_time \\ current_time) do
@@ -20,6 +26,404 @@ defmodule Wallaby.Browser do
           retry(f, start_time)
         end
     end
+  end
+
+  @doc """
+  Fills in a "fillable" element with text. Input elements are looked up by id, label text,
+  or name.
+  """
+  @spec fill_in(parent, locator, opts) :: parent
+  # @spec fill_in(Element.t, [with: String.t]) :: Element.t
+
+  def fill_in(parent, locator, [{:with, value} | _]=opts) when is_binary(value) do
+    parent
+    |> find(StatelessQuery.fillable_field(locator, opts))
+    |> fill_in(with: value)
+
+    parent
+  end
+  def fill_in(parent, locator, [{:with, value} | _]=opts) when is_number(value) do
+    fill_in(parent, locator,  Keyword.merge(opts, [with: to_string(value)]))
+  end
+  def fill_in(%Element{}=element, with: value) when is_binary(value) do
+    element
+    |> clear
+    |> set_value(value)
+
+    element
+  end
+
+  @doc """
+  Chooses a radio button based on id, label text, or name.
+  """
+  @spec choose(parent, locator, opts) :: parent
+  # @spec choose(Element.t) :: Element.t
+
+  def choose(parent, locator, opts\\[]) when is_binary(locator) do
+    parent
+    |> find(StatelessQuery.radio_button(locator, opts))
+    |> click
+
+    parent
+  end
+  def choose(%Element{}=element) do
+    click(element)
+  end
+
+  @doc """
+  Checks a checkbox based on id, label text, or name.
+  """
+  @spec check(parent, locator, opts) :: parent
+  # @spec check(Element.t) :: Element.t
+
+  def check(parent, locator, opts\\[]) do
+    parent
+    |> find(StatelessQuery.checkbox(locator, opts))
+    |> check
+
+    parent
+  end
+
+  @doc """
+  Unchecks a checkbox based on id, label text, or name.
+  """
+  @spec uncheck(parent, locator, opts) :: parent
+  # @spec uncheck(t) :: t
+
+  def uncheck(parent, locator, opts\\[]) do
+    parent
+    |> find(StatelessQuery.checkbox(locator, opts))
+    |> uncheck
+
+    parent
+  end
+
+  @doc """
+  Selects an option from a select box. The select box can be found by id, label
+  text, or name. The option can be found by its text.
+  """
+  @spec select(parent, locator, option: String.t) :: parent
+
+  def select(parent, locator, [option: option_text]=opts) do
+    parent
+    |> find(StatelessQuery.select(locator, opts))
+    |> find(StatelessQuery.option(option_text, []))
+    |> click
+
+    parent
+  end
+
+  @doc """
+  Clicks the matching link. Links can be found based on id, name, or link text.
+  """
+  @spec click_link(parent, locator, opts) :: parent
+
+  def click_link(parent, locator, opts\\[]) do
+    parent
+    |> find(StatelessQuery.link(locator, opts))
+    |> click
+
+    parent
+  end
+
+  @doc """
+  Clicks the matching button. Buttons can be found based on id, name, or button text.
+  """
+  @spec click_button(parent, locator, opts) :: parent
+
+  def click_button(parent, locator, opts\\[]) do
+    parent
+    |> find(StatelessQuery.button(locator, opts))
+    |> click
+
+    parent
+  end
+
+  @doc """
+  Clicks on the matching button. Alias for `click_button`.
+  """
+  @spec click_on(parent, locator, opts) :: parent
+
+  def click_on(parent, locator, opts\\[]) do
+    click_button(parent, locator, opts)
+  end
+
+  # @doc """
+  # Clears an input field. Input elements are looked up by id, label text, or name.
+  # The element can also be passed in directly.
+  # """
+  # @spec clear(Session.t, query) :: Session.t
+  # def clear(session, query) when is_binary(query) do
+  #   session
+  #   |> find({:fillable_field, query})
+  #   |> clear()
+  # end
+
+  @doc """
+  Attaches a file to a file input. Input elements are looked up by id, label text,
+  or name.
+  """
+  @spec attach_file(parent, locator, opts) :: parent
+
+  def attach_file(parent, locator, [{:path, value} | _]=opts) do
+    path = :filename.absname(value)
+
+    parent
+    |> find(StatelessQuery.file_field(locator, opts))
+    |> fill_in(with: path)
+
+    parent
+  end
+
+  @doc """
+  Deletes a session.
+  """
+  @spec delete(t) :: :ok
+
+  def delete(session) do
+    Driver.execute_script(session, "localStorage.clear()")
+    Driver.delete(session)
+    :ok
+  end
+
+  @doc """
+  Takes a screenshot of the current window.
+  Screenshots are saved to a "screenshots" directory in the same directory the
+  tests are run in.
+  """
+  @spec take_screenshot(Element.t | t) :: Element.t | t
+
+  def take_screenshot(screenshotable) do
+    image_data =
+      screenshotable
+      |> Driver.take_screenshot
+
+    path = path_for_screenshot
+    File.write! path, image_data
+
+    Map.update(screenshotable, :screenshots, [], &(&1 ++ [path]))
+  end
+
+  @doc """
+  Sets the size of the sessions window.
+  """
+  @spec set_window_size(t, pos_integer, pos_integer) :: t
+
+  def set_window_size(session, width, height) do
+    {:ok, _} = Driver.set_window_size(session, width, height)
+    session
+  end
+
+  @doc """
+  Gets the size of the session's window.
+  """
+  @spec get_window_size(t) :: %{String.t => pos_integer, String.t => pos_integer}
+
+  def get_window_size(session) do
+    {:ok, size} = Driver.get_window_size(session)
+    size
+  end
+
+  @doc """
+  Gets the current url of the session
+  """
+  @spec get_current_url(t) :: String.t
+
+  def get_current_url(session) do
+    {:ok, url} = Driver.current_url(session)
+    url
+  end
+
+  @doc """
+  Gets the current path of the session
+  """
+  @spec get_current_path(t) :: String.t
+
+  def get_current_path(session) do
+    URI.parse(get_current_url(session)).path
+  end
+
+  @doc """
+  Gets the title for the current page
+  """
+  @spec page_title(t) :: String.t
+
+  def page_title(session) do
+    {:ok, title} = Driver.page_title(session)
+    title
+  end
+
+  @doc """
+  Executes javascript synchoronously, taking as arguments the script to execute,
+  and optionally a list of arguments available in the script via `arguments`
+  """
+  @spec execute_script(t, String.t, list) :: t
+
+  def execute_script(session, script, arguments \\ []) do
+    {:ok, value} = Driver.execute_script(session, script, arguments)
+    value
+  end
+
+  @doc """
+  Sends a list of key strokes to active element. Keys should be provided as a
+  list of atoms, which are automatically converted into the corresponding key
+  codes.
+
+  For a list of available key codes see `Wallaby.Helpers.KeyCodes`.
+
+  ## Example
+
+      iex> Wallaby.Session.send_keys(session, [:enter])
+      iex> Wallaby.Session.send_keys(session, [:shift, :enter])
+  """
+  @spec send_keys(t, list(atom)) :: t
+
+  def send_keys(session, keys) when is_list(keys) do
+    {:ok, _} = Driver.send_keys(session, keys)
+    session
+  end
+
+  @doc """
+  Sends text characters to the active element
+  """
+  @spec send_text(t, String.t) :: t
+
+  def send_text(session, text) do
+    {:ok, _} = Driver.send_text(session, text)
+    session
+  end
+
+  @doc """
+  Retrieves the source of the current page.
+  """
+  @spec page_source(t) :: String.t
+
+  def page_source(session) do
+    {:ok, source} = Driver.page_source(session)
+    source
+  end
+
+  defp request_url(path) do
+    base_url <> path
+  end
+
+  defp base_url do
+    Application.get_env(:wallaby, :base_url) || ""
+  end
+
+  defp path_for_screenshot do
+    File.mkdir_p!(screenshot_dir)
+    "#{screenshot_dir}/#{:erlang.system_time}.png"
+  end
+
+  defp screenshot_dir do
+    Application.get_env(:wallaby, :screenshot_dir) || "#{File.cwd!()}/screenshots"
+  end
+
+  @doc """
+  Sets the value of an element.
+  """
+  def set_value(element, value) do
+    {:ok, _} = Driver.set_value(element, value)
+  end
+
+  @doc """
+  Clears an input field. Input elements are looked up by id, label text, or name.
+  The element can also be passed in directly.
+  """
+  @spec clear(Element.t) :: Session.t
+
+  def clear(element) do
+    {:ok, _} = Driver.clear(element)
+    element
+  end
+
+  @doc """
+  Clicks a element.
+  """
+  @spec click(t) :: Session.t
+
+  def click(element) do
+    Driver.click(element)
+    element
+  end
+
+  def check(%Element{}=element) do
+    unless checked?(element) do
+      click(element)
+    end
+    element
+  end
+
+  def uncheck(%Element{}=element) do
+    if checked?(element) do
+      click(element)
+    end
+    element
+  end
+
+  @doc """
+  Gets the Element's text value.
+  """
+  @spec text(t) :: String.t
+
+  def text(element) do
+    case Driver.text(element) do
+      {:ok, text} ->
+        text
+      {:error, :stale_reference_error} ->
+        raise Wallaby.StaleReferenceException
+    end
+  end
+
+  @doc """
+  Gets the value of the elements attribute.
+  """
+  @spec attr(t, String.t) :: String.t | nil
+
+  def attr(element, name) do
+    {:ok, attribute} = Driver.attribute(element, name)
+    attribute
+  end
+
+  @doc """
+  Gets the selected value of the element.
+
+  For Checkboxes and Radio buttons it returns the selected option.
+  """
+  @spec selected(t) :: any()
+
+  def selected(element) do
+    {:ok, value} = Driver.selected(element)
+    value
+  end
+
+  @doc """
+  Checks if the element has been selected.
+  """
+  @spec checked?(t) :: boolean()
+
+  def checked?(%Element{}=element) do
+    selected(element) == true
+  end
+
+  @doc """
+  Checks if the element has been selected. Alias for checked?(element)
+  """
+  @spec selected?(t) :: boolean()
+
+  def selected?(%Element{}=element) do
+    checked?(element)
+  end
+
+  @doc """
+  Checks if the element is visible on the page
+  """
+  @spec visible?(t) :: boolean()
+
+  def visible?(%Element{}=element) do
+    {:ok, displayed} = Driver.displayed(element)
+    displayed
   end
 
   @doc """
@@ -46,7 +450,7 @@ defmodule Wallaby.Browser do
         query = %StatelessQuery{query | result: result}
 
         if Wallaby.screenshot_on_failure? do
-          Session.take_screenshot(parent)
+          take_screenshot(parent)
         end
 
         case validate_html(parent, query) do
@@ -58,7 +462,7 @@ defmodule Wallaby.Browser do
 
       {:error, e} ->
         if Wallaby.screenshot_on_failure? do
-          Session.take_screenshot(parent)
+          take_screenshot(parent)
         end
 
         raise Wallaby.QueryError, ErrorMessage.message(query, e)
@@ -82,7 +486,7 @@ defmodule Wallaby.Browser do
   # @spec has_value?(t, any()) :: boolean()
 
   def has_value?(%Element{}=element, value) do
-    Element.attr(element, "value") == value
+    attr(element, "value") == value
   end
 
   @doc """
@@ -99,8 +503,8 @@ defmodule Wallaby.Browser do
 
   def has?(parent, query) do
     case execute_query(parent, query) do
-      {:ok, query} -> true
-      {:error, e} -> false
+      {:ok, _} -> true
+      {:error, _} -> false
     end
   end
 
@@ -139,8 +543,26 @@ defmodule Wallaby.Browser do
     |> Enum.empty?
   end
 
-  def visit(session, page) do
-    Wallaby.Session.visit(session, page)
+  @doc """
+  Changes the current page to the provided route.
+  Relative paths are appended to the provided base_url.
+  Absolute paths do not use the base_url.
+  """
+  @spec visit(t, String.t) :: t
+
+  def visit(session, path) do
+    uri = URI.parse(path)
+
+    cond do
+      uri.host == nil && String.length(base_url) == 0 ->
+        raise Wallaby.NoBaseUrl, path
+      uri.host ->
+        Driver.visit(session, path)
+      true ->
+        Driver.visit(session, request_url(path))
+    end
+
+    session
   end
 
   defp validate_html(parent, %{html_validation: :button_type}=query) do
@@ -161,21 +583,21 @@ defmodule Wallaby.Browser do
       Enum.any?(labels, &(missing_for?(&1))) ->
         {:error, :label_with_no_for}
       label=List.first(labels) ->
-        {:error, {:label_does_not_find_field, Element.attr(label, "for")}}
+        {:error, {:label_does_not_find_field, attr(label, "for")}}
       true ->
         {:ok, query}
     end
   end
-  defp validate_html(parent, query), do: {:ok, query}
+  defp validate_html(_, query), do: {:ok, query}
 
   defp missing_for?(element) do
-    Element.attr(element, "for") == nil
+    attr(element, "for") == nil
   end
 
   defp validate_visibility(query, elements) do
     visible = StatelessQuery.visible?(query)
 
-    {:ok, Enum.filter(elements, &(Element.visible?(&1) == visible))}
+    {:ok, Enum.filter(elements, &(visible?(&1) == visible))}
   end
 
   defp validate_count(query, elements) do

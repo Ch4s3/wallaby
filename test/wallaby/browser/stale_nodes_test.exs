@@ -20,7 +20,7 @@ defmodule Wallaby.Browser.StaleElementsTest do
       Process.sleep(1_000)
 
       assert_raise Wallaby.StaleReferenceException, fn ->
-        Element.text(element)
+        text(element)
       end
     end
   end

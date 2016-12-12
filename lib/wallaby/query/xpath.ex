@@ -1,4 +1,4 @@
-defmodule Wallaby.XPath do
+defmodule Wallaby.StatelessQuery.XPath do
   @type query :: String.t
   @type xpath :: String.t
   @type name  :: query

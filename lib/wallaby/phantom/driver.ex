@@ -5,7 +5,6 @@ defmodule Wallaby.Phantom.Driver do
 
   alias Wallaby.Session
   alias Wallaby.Element
-  alias Wallaby.Element.Query
   alias Wallaby.Phantom.Logger
   alias Wallaby.Phantom.LogStore
 
@@ -334,7 +333,7 @@ defmodule Wallaby.Phantom.Driver do
   defp make_request(method, url, body) do
     with {:ok, response} <- HTTPoison.request(method, url, body, headers, request_opts),
          {:ok, decoded} <- Poison.decode(response.body),
-         {:ok, validated} <- check_for_response_errors(decoded), 
+         {:ok, validated} <- check_for_response_errors(decoded),
       do: {:ok, validated}
     # else
       # TODO: These exceptions need to be moved to the call sites

@@ -1,8 +1,6 @@
 defmodule Wallaby.Browser.Actions.ClickButtonTest do
   use Wallaby.SessionCase, async: true
 
-  alias Wallaby.StatelessQuery
-
   setup %{session: session} do
     page =
       session

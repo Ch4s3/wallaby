@@ -26,6 +26,18 @@ defmodule Wallaby.Browser.FindTest do
       assert element
     end
 
+    test "queries can be scoped by elements", %{session: session} do
+      users =
+        session
+        |> visit("nesting.html")
+        |> find(".dashboard")
+        |> find(".users")
+        |> all(".user")
+
+      assert Enum.count(users) == 3
+      assert List.first(users) |> text == "Chris"
+    end
+
     test "throws a not found error if the element could not be found", %{page: page} do
       assert_raise Wallaby.QueryError, ~r/Expected to find/, fn ->
         find(page, css("#not-there"))
@@ -48,6 +60,18 @@ defmodule Wallaby.Browser.FindTest do
       assert_raise Wallaby.QueryError, ~r/invisible/, fn ->
         find(page, "#visible", visible: false)
       end
+    end
+
+    test "find/2 raises an error if the element is not visible", %{session: session} do
+      session
+      |> visit("page_1.html")
+
+      assert_raise Wallaby.QueryError, fn ->
+        find(session, "#invisible")
+      end
+
+      assert find(session, "#visible", count: :any)
+      |> length == 1
     end
 
     test "finds invisible elements", %{page: page} do
@@ -74,5 +98,30 @@ defmodule Wallaby.Browser.FindTest do
       assert find(page, ".user", text: "Visible User", visible: true)
       assert find(page, ".invisible-elements", visible: false, count: 3)
     end
+  end
+
+  test "waits for an element to be visible", %{session: session} do
+    session
+    |> visit("wait.html")
+
+    assert find(session, ".main")
+  end
+
+  test "waits for count elements to be visible", %{session: session} do
+    session
+    |> visit("wait.html")
+
+    assert find(session, ".orange", count: 5) |> length == 5
+  end
+
+  test "finding one or more elements", %{session: session} do
+    session
+    |> visit("page_1.html")
+
+    assert_raise Wallaby.QueryError, fn ->
+      find(session, ".not-there")
+    end
+
+    assert find(session, "li", count: :any) |> length == 4
   end
 end

@@ -1,4 +1,51 @@
 defmodule Wallaby.StatelessQuery do
+  @moduledoc ~S"""
+  Provides the query DSL.
+
+  Queries are used to locate and retrieve DOM elements. The standard method for
+  querying is css selectors:
+
+  ```
+  visit("/page.html")
+  |> find("#main-page .dashboard")
+  ```
+
+  If more complex querying is needed then its possible to use XPath:
+
+  ```
+  find(page, {:xpath, "//input"})
+  ```
+
+  By default finders only work with elements that would be visible to a real
+  user.
+
+  ## Scoping
+
+  Finders can also be chained together to provide scoping:
+
+  ```
+  visit("/page.html")
+  |> find(".users")
+  |> find(".user", count: 3)
+  |> List.first
+  |> find(".user-name")
+  ```
+
+  ## Form elements
+
+  There are several custom finders for locating form elements. Each of these allows
+  finding by their name, id text, or label text. This allows for more robust querying
+  and decouples the query from presentation selectors like css classes.
+
+  ## Query Options
+
+  All of the query operations accept the following options:
+
+    * `:count` - The number of elements that should be found (default: 1).
+    * `:visible` - Determines if the query should return only visible elements (default: true).
+    * `:text` - Text that should be found inside the element.
+  """
+
   defstruct method: nil,
             selector: nil,
             html_validation: nil,
@@ -21,7 +68,7 @@ defmodule Wallaby.StatelessQuery do
   }
 
   alias __MODULE__
-  alias Wallaby.XPath
+  alias Wallaby.StatelessQuery.XPath
 
   def css(selector, opts \\ []) do
     %StatelessQuery{

@@ -4,7 +4,7 @@ defmodule Wallaby.StatelessQuery.ErrorMessage do
   @doc """
   Compose an error message based on the error method and query information
   """
-  @spec message(atom(), StatelessQuery.t) :: String.t
+  @spec message(StatelessQuery.t, any()) :: String.t
 
   def message(%StatelessQuery{}=query, :not_found) do
     """
@@ -66,6 +66,7 @@ defmodule Wallaby.StatelessQuery.ErrorMessage do
   def method(%StatelessQuery{conditions: conditions}=query) do
     method(query.method, conditions[:count] > 1)
   end
+  def method(_), do: "element"
 
   def method(:css, true), do: "elements that matched the css"
   def method(:css, false), do: "element that matched the css"
@@ -94,14 +95,13 @@ defmodule Wallaby.StatelessQuery.ErrorMessage do
   def method(:file_field, true), do: "file fields"
   def method(:file_field, false), do: "file field"
 
-  def method(_), do: "element"
 
   def short_method(:css, count) when count > 1,  do: "elements"
   def short_method(:css, count) when count == 0, do: "elements"
-  def short_method(:css, count),                 do: "element"
+  def short_method(:css, _),                 do: "element"
 
   def short_method(:xpath, count) when count == 1, do: "element"
-  def short_method(:xpath, count), do: "elements"
+  def short_method(:xpath, _), do: "elements"
 
   def short_method(method, count), do: method(method, count != 1)
 
@@ -164,5 +164,5 @@ defmodule Wallaby.StatelessQuery.ErrorMessage do
   end
 
   def result_expectation(result) when length(result) == 1, do: "was found"
-  def result_expectation(result), do: "were found"
+  def result_expectation(_), do: "were found"
 end

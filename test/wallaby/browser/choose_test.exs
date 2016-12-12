@@ -10,26 +10,26 @@ defmodule Wallaby.Browser.ChooseTest do
   end
 
   test "choosing a radio button", %{page: page} do
-    refute find(page, "#option2") |> Element.checked?
+    refute find(page, "#option2") |> checked?
 
     page
     |> choose("option2")
 
-    assert find(page, "#option2") |> Element.checked?
+    assert find(page, "#option2") |> checked?
   end
 
   test "choosing a radio button unchecks other buttons in the group", %{page: page} do
     page
     |> choose("Option 1")
     |> find("#option1")
-    |> Element.checked?
+    |> checked?
     |> assert
 
     page
     |> choose("option2")
 
-    refute find(page, "#option1") |> Element.checked?
-    assert find(page, "#option2") |> Element.checked?
+    refute find(page, "#option1") |> checked?
+    assert find(page, "#option2") |> checked?
   end
 
   test "choosing a radio button returns the parent", %{page: page} do
@@ -37,7 +37,7 @@ defmodule Wallaby.Browser.ChooseTest do
     |> choose("Option 1")
     |> choose("option2")
 
-    assert find(page, "#option2") |> Element.checked?
+    assert find(page, "#option2") |> checked?
   end
 
   test "throw an error if a label exists but does not have a for attribute", %{page: page} do
