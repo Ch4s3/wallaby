@@ -7,11 +7,32 @@ defmodule Wallaby.Browser do
 
   @type t :: any()
 
-  @type parent :: Wallaby.StatelessQuery.parent()
-  @type locator :: Wallaby.StatelessQuery.locator()
-  @type opts :: Wallaby.StatelessQuery.opts()
+  @opaque session :: Session.t
+  @opaque element :: Element.t
+
+  @type parent :: element
+                | session
+  @type locator :: StatelessQuery.t()
+                 | String.t
+  @type opts :: StatelessQuery.opts()
 
   @default_max_wait_time 3_000
+
+  @doc """
+  Attempts to synchronize with the browser. This is most often used to
+  execute queries repeatedly until it either exceeds the time limit or
+  returns a success.
+
+  ## Note
+
+  It is possible that this function never halts. Whenever we experience a stale
+  reference error we retry the query without checking to see if we've run over
+  our time. In practice we should eventually be able to query the dom in a stable
+  state. However, if this error does continue to occur it will cause wallaby to
+  loop forever (or until the test is killed by exunit).
+  """
+  @opaque result :: {:ok, any()} | {:error, any()}
+  @spec retry((() -> result), timeout) :: result()
 
   def retry(f, start_time \\ current_time) do
     case f.() do
@@ -32,18 +53,19 @@ defmodule Wallaby.Browser do
   Fills in a "fillable" element with text. Input elements are looked up by id, label text,
   or name.
   """
+  @spec fill_in(element, opts) :: element
+  @spec fill_in(parent, StatelessQuery.t, with: String.t) :: parent
   @spec fill_in(parent, locator, opts) :: parent
-  # @spec fill_in(Element.t, [with: String.t]) :: Element.t
 
+  def fill_in(parent, locator, [{:with, value} | _]=opts) when is_number(value) do
+    fill_in(parent, locator,  Keyword.merge(opts, [with: to_string(value)]))
+  end
   def fill_in(parent, locator, [{:with, value} | _]=opts) when is_binary(value) do
     parent
     |> find(StatelessQuery.fillable_field(locator, opts))
     |> fill_in(with: value)
 
     parent
-  end
-  def fill_in(parent, locator, [{:with, value} | _]=opts) when is_number(value) do
-    fill_in(parent, locator,  Keyword.merge(opts, [with: to_string(value)]))
   end
   def fill_in(%Element{}=element, with: value) when is_binary(value) do
     element
@@ -56,8 +78,9 @@ defmodule Wallaby.Browser do
   @doc """
   Chooses a radio button based on id, label text, or name.
   """
+  @spec choose(element) :: element
+  @spec choose(parent, StatelessQuery.t) :: parent
   @spec choose(parent, locator, opts) :: parent
-  # @spec choose(Element.t) :: Element.t
 
   def choose(parent, locator, opts\\[]) when is_binary(locator) do
     parent
@@ -73,8 +96,9 @@ defmodule Wallaby.Browser do
   @doc """
   Checks a checkbox based on id, label text, or name.
   """
+  @spec check(Element.t) :: Element.t
+  @spec check(parent, StatelessQuery.t) :: parent
   @spec check(parent, locator, opts) :: parent
-  # @spec check(Element.t) :: Element.t
 
   def check(parent, locator, opts\\[]) do
     parent
@@ -87,8 +111,9 @@ defmodule Wallaby.Browser do
   @doc """
   Unchecks a checkbox based on id, label text, or name.
   """
+  @spec uncheck(Element.t) :: Element.t
+  @spec uncheck(parent, StatelessQuery.t) :: parent
   @spec uncheck(parent, locator, opts) :: parent
-  # @spec uncheck(t) :: t
 
   def uncheck(parent, locator, opts\\[]) do
     parent
@@ -102,7 +127,10 @@ defmodule Wallaby.Browser do
   Selects an option from a select box. The select box can be found by id, label
   text, or name. The option can be found by its text.
   """
-  @spec select(parent, locator, option: String.t) :: parent
+  @spec select(Element.t) :: Element.t
+  @spec select(parent, StatelessQuery.t) :: parent
+  @spec select(parent, StatelessQuery.t, from: StatelessQuery.t) :: parent
+  @spec select(parent, locator, opts) :: parent
 
   def select(parent, locator, [option: option_text]=opts) do
     parent
@@ -116,6 +144,7 @@ defmodule Wallaby.Browser do
   @doc """
   Clicks the matching link. Links can be found based on id, name, or link text.
   """
+  @spec click_link(parent, StatelessQuery.t) :: parent
   @spec click_link(parent, locator, opts) :: parent
 
   def click_link(parent, locator, opts\\[]) do
@@ -129,6 +158,7 @@ defmodule Wallaby.Browser do
   @doc """
   Clicks the matching button. Buttons can be found based on id, name, or button text.
   """
+  @spec click_button(parent, StatelessQuery.t) :: parent
   @spec click_button(parent, locator, opts) :: parent
 
   def click_button(parent, locator, opts\\[]) do
@@ -422,8 +452,7 @@ defmodule Wallaby.Browser do
   @spec visible?(t) :: boolean()
 
   def visible?(%Element{}=element) do
-    {:ok, displayed} = Driver.displayed(element)
-    displayed
+    Driver.displayed!(element)
   end
 
   @doc """
@@ -630,14 +659,18 @@ defmodule Wallaby.Browser do
 
   defp execute_query(parent, query) do
     retry fn ->
-      # TODO: Extract a few pieces of this logic so we dont' recompute them
-      with {:ok, query}  <- StatelessQuery.validate(query),
-           {method, selector} <- StatelessQuery.compile(query),
-           {:ok, elements} <- Driver.find_elements(parent, {method, selector}),
-           {:ok, elements} <- validate_visibility(query, elements),
-           {:ok, elements} <- validate_text(query, elements),
-           {:ok, elements} <- validate_count(query, elements),
-       do: {:ok, %StatelessQuery{query | result: elements}}
+      try do
+        with {:ok, query}  <- StatelessQuery.validate(query),
+             {method, selector} <- StatelessQuery.compile(query),
+             {:ok, elements} <- Driver.find_elements(parent, {method, selector}),
+             {:ok, elements} <- validate_visibility(query, elements),
+             {:ok, elements} <- validate_text(query, elements),
+             {:ok, elements} <- validate_count(query, elements),
+         do: {:ok, %StatelessQuery{query | result: elements}}
+      rescue
+        Wallaby.StaleReferenceException ->
+          {:error, :stale_reference}
+      end
     end
   end
 

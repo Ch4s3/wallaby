@@ -3,6 +3,28 @@ defmodule Wallaby.BrowserTest do
 
   alias Wallaby.StatelessQuery
 
+  describe "retry/2" do
+    test "returns a valid result" do
+      assert retry(fn -> {:ok, []} end) == {:ok, []}
+    end
+
+    test "it retries if the dom element is stale" do
+      {:ok, agent} = Agent.start_link(fn -> {:error, :stale_reference} end)
+
+      run_query = fn ->
+        Agent.get_and_update(agent, fn initial ->
+            {initial, {:ok, []}}
+        end)
+      end
+
+      assert retry run_query
+    end
+
+    test "it retries until time runs out" do
+      assert retry(fn -> {:error, :some_error} end) == {:error, :some_error}
+    end
+  end
+
   describe "has?/2" do
     test "allows css queries", %{session: session} do
       session

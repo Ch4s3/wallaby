@@ -61,7 +61,8 @@ defmodule Wallaby.StatelessQuery.ErrorMessage do
   Extracts the selector method from the selector and converts it into a human
   readable format
   """
-  @spec method({atom(), any()}) :: String.t
+  @spec method(StatelessQuery.t) :: String.t
+  @spec method({atom(), boolean()}) :: String.t
 
   def method(%StatelessQuery{conditions: conditions}=query) do
     method(query.method, conditions[:count] > 1)
@@ -131,7 +132,8 @@ defmodule Wallaby.StatelessQuery.ErrorMessage do
   @doc """
   Converts the visibilty attribute into a human readable form.
   """
-  @spec visibility(Keyword.t) :: String.t
+  @spec visibility(StatelessQuery.t) :: String.t
+
   def visibility(query) do
     if StatelessQuery.visible?(query) do
       "visible"
@@ -140,7 +142,7 @@ defmodule Wallaby.StatelessQuery.ErrorMessage do
     end
   end
 
-  defp result_count(result) when length(result) == 1, do: "only 1"
+  defp result_count([_]), do: "only 1"
   defp result_count(result), do: "#{Enum.count(result)}"
 
   defp times(1), do: "1 time"

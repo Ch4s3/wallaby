@@ -178,6 +178,18 @@ defmodule Wallaby.Phantom.Driver do
     end)
   end
 
+  def displayed!(element) do
+    check_logs! element, fn ->
+      case displayed(element) do
+        {:ok, value} ->
+          value
+          
+        {:error, :stale_reference_error} ->
+          raise Wallaby.StaleReferenceException
+      end
+    end
+  end
+
   @doc """
   Gets the size of a element.
 
@@ -335,15 +347,22 @@ defmodule Wallaby.Phantom.Driver do
          {:ok, decoded} <- Poison.decode(response.body),
          {:ok, validated} <- check_for_response_errors(decoded),
       do: {:ok, validated}
-    # else
-      # TODO: These exceptions need to be moved to the call sites
-      # {:error, :stale_reference_error} ->
-      #   raise Wallaby.StaleReferenceException
-      # {:error, :invalid_selector} ->
-      #   raise Wallaby.InvalidSelector, Poison.decode!(body)
-      # {:error, e} ->
-      #   raise "There was an error calling: #{url} -> #{e.reason}"
-    # end
+  end
+
+  defp make_request!(method, url, body) do
+    case make_request(method, url, body) do
+      {:ok, resp} ->
+        resp
+
+      {:error, :stale_reference_error} ->
+        raise Wallaby.StaleReferenceException
+
+      {:error, :invalid_selector} ->
+        raise Wallaby.InvalidSelector, Poison.decode!(body)
+
+      {:error, e} ->
+        raise "There was an error calling: #{url} -> #{e.reason}"
+    end
   end
 
   def check_for_response_errors(response) do

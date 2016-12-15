@@ -50,7 +50,6 @@ defmodule Wallaby.StatelessQuery do
             selector: nil,
             html_validation: nil,
             conditions: [],
-            filters: [],
             result: []
 
   @type method :: :css
@@ -63,8 +62,23 @@ defmodule Wallaby.StatelessQuery do
                 | :option
                 | :select
                 | :file_field
+  @type selector :: String.t
+  @type html_validation :: :bad_label
+                         | :button_type
+                         | nil
+  @type conditions :: [
+    count: non_neg_integer,
+    text: String.t,
+    visible: boolean(),
+  ]
+  @type result :: list(Element.t)
 
   @type t :: %__MODULE__{
+    method: method(),
+    selector: selector(),
+    html_validation: html_validation(),
+    conditions: conditions(),
+    result: result(),
   }
 
   alias __MODULE__
