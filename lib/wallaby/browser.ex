@@ -172,6 +172,7 @@ defmodule Wallaby.Browser do
   @doc """
   Clicks on the matching button. Alias for `click_button`.
   """
+  @spec click_on(parent, StatelessQuery.t) :: parent
   @spec click_on(parent, locator, opts) :: parent
 
   def click_on(parent, locator, opts\\[]) do
@@ -182,18 +183,28 @@ defmodule Wallaby.Browser do
   # Clears an input field. Input elements are looked up by id, label text, or name.
   # The element can also be passed in directly.
   # """
-  # @spec clear(Session.t, query) :: Session.t
-  # def clear(session, query) when is_binary(query) do
-  #   session
-  #   |> find({:fillable_field, query})
-  #   |> clear()
-  # end
+  @spec clear(parent, locator, opts) :: parent
+  @spec clear(parent, StatelessQuery.t) :: parent
+  @spec clear(Element.t) :: Element.t
+
+  def clear(session, query) when is_binary(query) do
+    session
+    |> find({:fillable_field, query})
+    |> clear()
+  end
+
+  def clear(element) do
+    {:ok, _} = Driver.clear(element)
+    element
+  end
 
   @doc """
   Attaches a file to a file input. Input elements are looked up by id, label text,
   or name.
   """
   @spec attach_file(parent, locator, opts) :: parent
+  @spec attach_file(parent, StatelessQuery.t, path: String.t) :: parent
+  @spec attach_file(parent, Element.t, path: String.t) :: parent
 
   def attach_file(parent, locator, [{:path, value} | _]=opts) do
     path = :filename.absname(value)
@@ -206,22 +217,11 @@ defmodule Wallaby.Browser do
   end
 
   @doc """
-  Deletes a session.
-  """
-  @spec delete(t) :: :ok
-
-  def delete(session) do
-    Driver.execute_script(session, "localStorage.clear()")
-    Driver.delete(session)
-    :ok
-  end
-
-  @doc """
   Takes a screenshot of the current window.
   Screenshots are saved to a "screenshots" directory in the same directory the
   tests are run in.
   """
-  @spec take_screenshot(Element.t | t) :: Element.t | t
+  @spec take_screenshot(parent) :: parent
 
   def take_screenshot(screenshotable) do
     image_data =
@@ -237,7 +237,7 @@ defmodule Wallaby.Browser do
   @doc """
   Sets the size of the sessions window.
   """
-  @spec set_window_size(t, pos_integer, pos_integer) :: t
+  @spec set_window_size(parent, pos_integer, pos_integer) :: parent
 
   def set_window_size(session, width, height) do
     {:ok, _} = Driver.set_window_size(session, width, height)
@@ -247,7 +247,7 @@ defmodule Wallaby.Browser do
   @doc """
   Gets the size of the session's window.
   """
-  @spec get_window_size(t) :: %{String.t => pos_integer, String.t => pos_integer}
+  @spec get_window_size(parent) :: %{String.t => pos_integer, String.t => pos_integer}
 
   def get_window_size(session) do
     {:ok, size} = Driver.get_window_size(session)
@@ -257,26 +257,35 @@ defmodule Wallaby.Browser do
   @doc """
   Gets the current url of the session
   """
-  @spec get_current_url(t) :: String.t
+  @spec get_current_url(parent) :: String.t
 
   def get_current_url(session) do
     {:ok, url} = Driver.current_url(session)
     url
   end
 
+  @spec current_url(parent) :: String.t
+  def current_url(_) do
+  end
+
   @doc """
   Gets the current path of the session
   """
-  @spec get_current_path(t) :: String.t
+  @spec get_current_path(parent) :: String.t
 
   def get_current_path(session) do
     URI.parse(get_current_url(session)).path
   end
 
+  @spec current_path(parent) :: String.t
+  def current_path(parent) do
+
+  end
+
   @doc """
   Gets the title for the current page
   """
-  @spec page_title(t) :: String.t
+  @spec page_title(parent) :: String.t
 
   def page_title(session) do
     {:ok, title} = Driver.page_title(session)
@@ -287,7 +296,7 @@ defmodule Wallaby.Browser do
   Executes javascript synchoronously, taking as arguments the script to execute,
   and optionally a list of arguments available in the script via `arguments`
   """
-  @spec execute_script(t, String.t, list) :: t
+  @spec execute_script(parent, String.t, list) :: parent
 
   def execute_script(session, script, arguments \\ []) do
     {:ok, value} = Driver.execute_script(session, script, arguments)
@@ -306,7 +315,8 @@ defmodule Wallaby.Browser do
       iex> Wallaby.Session.send_keys(session, [:enter])
       iex> Wallaby.Session.send_keys(session, [:shift, :enter])
   """
-  @spec send_keys(t, list(atom)) :: t
+  @spec send_keys(parent, list(atom)) :: parent
+  @spec send_keys(parent, StatelessQuery.t, list(atom)) :: parent
 
   def send_keys(session, keys) when is_list(keys) do
     {:ok, _} = Driver.send_keys(session, keys)
@@ -316,7 +326,9 @@ defmodule Wallaby.Browser do
   @doc """
   Sends text characters to the active element
   """
-  @spec send_text(t, String.t) :: t
+  @spec send_text(parent, String.t) :: parent
+  @spec send_text(Element.t, String.t) :: Element.t
+  @spec send_text(parent, StatelessQuery.t, String.t) :: parent
 
   def send_text(session, text) do
     {:ok, _} = Driver.send_text(session, text)
@@ -326,28 +338,11 @@ defmodule Wallaby.Browser do
   @doc """
   Retrieves the source of the current page.
   """
-  @spec page_source(t) :: String.t
+  @spec page_source(parent) :: String.t
 
   def page_source(session) do
     {:ok, source} = Driver.page_source(session)
     source
-  end
-
-  defp request_url(path) do
-    base_url <> path
-  end
-
-  defp base_url do
-    Application.get_env(:wallaby, :base_url) || ""
-  end
-
-  defp path_for_screenshot do
-    File.mkdir_p!(screenshot_dir)
-    "#{screenshot_dir}/#{:erlang.system_time}.png"
-  end
-
-  defp screenshot_dir do
-    Application.get_env(:wallaby, :screenshot_dir) || "#{File.cwd!()}/screenshots"
   end
 
   @doc """
@@ -358,25 +353,21 @@ defmodule Wallaby.Browser do
   end
 
   @doc """
-  Clears an input field. Input elements are looked up by id, label text, or name.
-  The element can also be passed in directly.
-  """
-  @spec clear(Element.t) :: Session.t
-
-  def clear(element) do
-    {:ok, _} = Driver.clear(element)
-    element
-  end
-
-  @doc """
   Clicks a element.
   """
-  @spec click(t) :: Session.t
+  @spec click(parent, StatelessQuery.t) :: parent
+  @spec click(Element.t) :: Element.t
 
   def click(element) do
     Driver.click(element)
     element
   end
+
+  @doc """
+  Checks the element.
+  """
+  @spec check(Element.t) :: Element.t
+  @spec check(parent, StatelessQuery.t) :: parent
 
   def check(%Element{}=element) do
     unless checked?(element) do
@@ -384,6 +375,12 @@ defmodule Wallaby.Browser do
     end
     element
   end
+
+  @doc """
+  Marks the element as unchecked.
+  """
+  @spec uncheck(parent, StatelessQuery.t) :: parent
+  @spec uncheck(Element.t) :: Element.t
 
   def uncheck(%Element{}=element) do
     if checked?(element) do
@@ -395,7 +392,8 @@ defmodule Wallaby.Browser do
   @doc """
   Gets the Element's text value.
   """
-  @spec text(t) :: String.t
+  @spec text(parent) :: String.t
+  @spec text(Element.t) :: String.t
 
   def text(element) do
     case Driver.text(element) do
@@ -409,7 +407,8 @@ defmodule Wallaby.Browser do
   @doc """
   Gets the value of the elements attribute.
   """
-  @spec attr(t, String.t) :: String.t | nil
+  @spec attr(parent, StatelessQuery.t, String.t) :: String.t | nil
+  @spec attr(Element.t, String.t) :: String.t | nil
 
   def attr(element, name) do
     {:ok, attribute} = Driver.attribute(element, name)
@@ -421,7 +420,8 @@ defmodule Wallaby.Browser do
 
   For Checkboxes and Radio buttons it returns the selected option.
   """
-  @spec selected(t) :: any()
+  @spec selected(Element.t) :: String.t
+  @spec selected(parent, StatelessQuery.t) :: String.t
 
   def selected(element) do
     {:ok, value} = Driver.selected(element)
@@ -431,7 +431,8 @@ defmodule Wallaby.Browser do
   @doc """
   Checks if the element has been selected.
   """
-  @spec checked?(t) :: boolean()
+  @spec checked?(parent, StatelessQuery.t) :: boolean()
+  @spec checked?(Element.t) :: boolean()
 
   def checked?(%Element{}=element) do
     selected(element) == true
@@ -440,7 +441,8 @@ defmodule Wallaby.Browser do
   @doc """
   Checks if the element has been selected. Alias for checked?(element)
   """
-  @spec selected?(t) :: boolean()
+  @spec selected(parent, StatelessQuery.t) :: boolean()
+  @spec selected?(Element.t) :: boolean()
 
   def selected?(%Element{}=element) do
     checked?(element)
@@ -449,7 +451,8 @@ defmodule Wallaby.Browser do
   @doc """
   Checks if the element is visible on the page
   """
-  @spec visible?(t) :: boolean()
+  @spec visible?(parent, StatelessQuery.t) :: boolean()
+  @spec visible?(Element.t) :: boolean()
 
   def visible?(%Element{}=element) do
     Driver.displayed!(element)
@@ -464,6 +467,10 @@ defmodule Wallaby.Browser do
 
   Selections can be scoped by providing a Element as the locator for the query.
   """
+  @spec find(parent, locator, opts) :: Element.t
+  @spec find(parent, locator) :: Element.t
+  @spec find(parent, StatelessQuery.t) :: Element.t
+
   def find(parent, css, opts) when is_binary(css) do
     find(parent, StatelessQuery.css(css, opts))
   end
@@ -502,6 +509,10 @@ defmodule Wallaby.Browser do
   Finds all of the DOM elements that match the css selector. If no elements are
   found then an empty list is immediately returned.
   """
+  @spec all(parent, locator, opts) :: Element.t
+  @spec all(parent, locator) :: Element.t
+  @spec all(parent, StatelessQuery.t) :: Element.t
+
   def all(parent, css) when is_binary(css) do
     find(parent, StatelessQuery.css(css, minimum: 0))
   end
@@ -512,7 +523,8 @@ defmodule Wallaby.Browser do
   @doc """
   Matches the Element's value with the provided value.
   """
-  # @spec has_value?(t, any()) :: boolean()
+  @spec has_value?(parent, StatelessQuery.t, any()) :: boolean()
+  @spec has_value?(Element.t, any()) :: boolean()
 
   def has_value?(%Element{}=element, value) do
     attr(element, "value") == value
@@ -521,7 +533,8 @@ defmodule Wallaby.Browser do
   @doc """
   Matches the Element's content with the provided text and raises if not found
   """
-  # @spec assert_text(t, String.t) :: boolean()
+  @spec assert_text(Element.t, String.t) :: boolean()
+  @spec assert_text(parent, StatelessQuery.t, String.t) :: boolean()
 
   def assert_text(%Element{}=element, text) when is_binary(text) do
     cond do
@@ -529,6 +542,12 @@ defmodule Wallaby.Browser do
       true -> raise Wallaby.ExpectationNotMet, "Text '#{text}' was not found."
     end
   end
+
+  @doc """
+  Validates that the query returns a result. This can be used to define other
+  types of matchers.
+  """
+  @spec has?(parent, StatelessQuery.t) :: type
 
   def has?(parent, query) do
     case execute_query(parent, query) do
@@ -540,7 +559,8 @@ defmodule Wallaby.Browser do
   @doc """
   Matches the Element's content with the provided text
   """
-  # @spec has_text?(t, String.t) :: boolean()
+  @spec has_text?(Element.t, String.t) :: boolean()
+  @spec has_text?(parent, StatelessQuery.t, String.t) :: boolean()
 
   def has_text?(%Element{}=element, text) when is_binary(text) do
     try do
@@ -553,7 +573,8 @@ defmodule Wallaby.Browser do
   @doc """
   Searches for CSS on the page.
   """
-  # @spec has_css?(locator, String.t) :: boolean()
+  @spec has_css?(parent, StatelessQuery.t, String.t) :: boolean()
+  @spec has_css?(parent, locator) :: boolean()
 
   def has_css?(parent, css) when is_binary(css) do
     parent
@@ -564,7 +585,8 @@ defmodule Wallaby.Browser do
   @doc """
   Searches for css that should not be on the page
   """
-  # @spec has_no_css?(locator, String.t) :: boolean()
+  @spec has_no_css?(parent, StatelessQuery.t, String.t) :: boolean()
+  @spec has_no_css?(parent, locator) :: boolean()
 
   def has_no_css?(parent, css) when is_binary(css) do
     parent
@@ -577,7 +599,7 @@ defmodule Wallaby.Browser do
   Relative paths are appended to the provided base_url.
   Absolute paths do not use the base_url.
   """
-  @spec visit(t, String.t) :: t
+  @spec visit(parent, String.t) :: Session.t
 
   def visit(session, path) do
     uri = URI.parse(path)
@@ -684,5 +706,22 @@ defmodule Wallaby.Browser do
 
   defp max_wait_time do
     Application.get_env(:wallaby, :max_wait_time, @default_max_wait_time)
+  end
+
+  defp request_url(path) do
+    base_url <> path
+  end
+
+  defp base_url do
+    Application.get_env(:wallaby, :base_url) || ""
+  end
+
+  defp path_for_screenshot do
+    File.mkdir_p!(screenshot_dir)
+    "#{screenshot_dir}/#{:erlang.system_time}.png"
+  end
+
+  defp screenshot_dir do
+    Application.get_env(:wallaby, :screenshot_dir) || "#{File.cwd!()}/screenshots"
   end
 end
