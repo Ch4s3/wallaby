@@ -183,7 +183,7 @@ defmodule Wallaby.Phantom.Driver do
       case displayed(element) do
         {:ok, value} ->
           value
-          
+
         {:error, :stale_reference_error} ->
           raise Wallaby.StaleReferenceException
       end
@@ -256,7 +256,7 @@ defmodule Wallaby.Phantom.Driver do
   """
   def execute_script(session, script, arguments \\ []) do
     check_logs! session, fn ->
-      with {:ok, resp} <- request(:post, "#{session.url}/execute", %{script: script, args: arguments}),
+      with {:ok, resp} <- request(:post, "#{session.session_url}/execute", %{script: script, args: arguments}),
            {:ok, value} <- Map.fetch(resp, "value"),
         do: {:ok, value}
     end
@@ -265,9 +265,9 @@ defmodule Wallaby.Phantom.Driver do
   @doc """
   Sends a list of key strokes to active element
   """
-  def send_keys(session, keys) when is_list(keys) do
-    check_logs! session, fn ->
-      with {:ok, resp} <- request(:post, "#{session.url}/keys", Wallaby.Helpers.KeyCodes.json(keys), encode_json: false),
+  def send_keys(parent, keys) when is_list(keys) do
+    check_logs! parent, fn ->
+      with {:ok, resp} <- request(:post, "#{parent.session_url}/keys", Wallaby.Helpers.KeyCodes.json(keys), encode_json: false),
            {:ok, value} <- Map.fetch(resp, "value"),
       do: {:ok, value}
     end
@@ -278,7 +278,7 @@ defmodule Wallaby.Phantom.Driver do
   """
   def send_text(session, text) do
     check_logs! session, fn ->
-      with {:ok, resp} <- request(:post, "#{session.url}/keys", %{value: [text]}),
+      with {:ok, resp} <- request(:post, "#{session.session_url}/keys", %{value: [text]}),
            {:ok, value} <- Map.fetch(resp, "value"),
         do: {:ok, value}
     end

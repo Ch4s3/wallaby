@@ -12,8 +12,7 @@ defmodule Wallaby.Browser do
 
   @type parent :: element
                 | session
-  @type locator :: StatelessQuery.t()
-                 | String.t
+  @type locator :: String.t
   @type opts :: StatelessQuery.opts()
 
   @default_max_wait_time 3_000
@@ -78,16 +77,25 @@ defmodule Wallaby.Browser do
   @doc """
   Chooses a radio button based on id, label text, or name.
   """
-  @spec choose(element) :: element
+  @spec choose(Element.t) :: Element.t
   @spec choose(parent, StatelessQuery.t) :: parent
   @spec choose(parent, locator, opts) :: parent
 
-  def choose(parent, locator, opts\\[]) when is_binary(locator) do
+  # TODO: Untested
+  def choose(parent, locator, opts) when is_binary(locator) do
     parent
     |> find(StatelessQuery.radio_button(locator, opts))
     |> click
-
+  end
+  def choose(parent, locator) when is_binary(locator) do
     parent
+    |> find(StatelessQuery.radio_button(locator, []))
+    |> click
+  end
+  def choose(parent, query) do
+    parent
+    |> find(query)
+    |> click
   end
   def choose(%Element{}=element) do
     click(element)
@@ -100,12 +108,27 @@ defmodule Wallaby.Browser do
   @spec check(parent, StatelessQuery.t) :: parent
   @spec check(parent, locator, opts) :: parent
 
-  def check(parent, locator, opts\\[]) do
+  # TODO: Untested
+  def check(%Element{}=element) do
+    unless checked?(element) do
+      click(element)
+    end
+    element
+  end
+  def check(parent, locator) when is_binary(locator) do
+    parent
+    |> find(StatelessQuery.checkbox(locator, []))
+    |> check
+  end
+  def check(parent, locator, opts) when is_binary(locator) do
     parent
     |> find(StatelessQuery.checkbox(locator, opts))
     |> check
-
+  end
+  def check(parent, query) do
     parent
+    |> find(query)
+    |> check
   end
 
   @doc """
@@ -115,12 +138,26 @@ defmodule Wallaby.Browser do
   @spec uncheck(parent, StatelessQuery.t) :: parent
   @spec uncheck(parent, locator, opts) :: parent
 
-  def uncheck(parent, locator, opts\\[]) do
+  def uncheck(parent, locator, opts) when is_binary(locator) do
     parent
     |> find(StatelessQuery.checkbox(locator, opts))
     |> uncheck
-
+  end
+  def uncheck(parent, locator) when is_binary(locator) do
     parent
+    |> find(StatelessQuery.checkbox(locator, []))
+    |> uncheck
+  end
+  def uncheck(parent, query) do
+    parent
+    |> find(query)
+    |> uncheck
+  end
+  def uncheck(%Element{}=element) do
+    if checked?(element) do
+      click(element)
+    end
+    element
   end
 
   @doc """
@@ -132,13 +169,20 @@ defmodule Wallaby.Browser do
   @spec select(parent, StatelessQuery.t, from: StatelessQuery.t) :: parent
   @spec select(parent, locator, opts) :: parent
 
+  def select(element) do
+    element
+    |> click
+  end
+  def select(parent, query) do
+    parent
+    |> find(query)
+    |> click
+  end
   def select(parent, locator, [option: option_text]=opts) do
     parent
     |> find(StatelessQuery.select(locator, opts))
     |> find(StatelessQuery.option(option_text, []))
     |> click
-
-    parent
   end
 
   @doc """
@@ -147,12 +191,19 @@ defmodule Wallaby.Browser do
   @spec click_link(parent, StatelessQuery.t) :: parent
   @spec click_link(parent, locator, opts) :: parent
 
-  def click_link(parent, locator, opts\\[]) do
+  # TODO: Untested
+  def click_link(parent, locator, opts) when is_binary(locator) do
     parent
     |> find(StatelessQuery.link(locator, opts))
     |> click
-
+  end
+  def click_link(parent, locator) when is_binary(locator) do
     parent
+    |> find(StatelessQuery.link(locator, []))
+    |> click
+  end
+  def click_link(parent, query) do
+    click(parent, query)
   end
 
   @doc """
@@ -161,12 +212,18 @@ defmodule Wallaby.Browser do
   @spec click_button(parent, StatelessQuery.t) :: parent
   @spec click_button(parent, locator, opts) :: parent
 
-  def click_button(parent, locator, opts\\[]) do
+  def click_button(parent, locator, opts) when is_binary(locator) do
     parent
     |> find(StatelessQuery.button(locator, opts))
     |> click
-
+  end
+  def click_button(parent, locator) when is_binary(locator) do
     parent
+    |> find(StatelessQuery.button(locator, []))
+    |> click
+  end
+  def click_button(parent, query) do
+    click(parent, query)
   end
 
   @doc """
@@ -175,8 +232,18 @@ defmodule Wallaby.Browser do
   @spec click_on(parent, StatelessQuery.t) :: parent
   @spec click_on(parent, locator, opts) :: parent
 
-  def click_on(parent, locator, opts\\[]) do
-    click_button(parent, locator, opts)
+  def click_on(parent, locator, opts) when is_binary(locator) do
+    parent
+    |> find(StatelessQuery.button(locator, opts))
+    |> click
+  end
+  def click_on(parent, locator) when is_binary(locator) do
+    parent
+    |> find(StatelessQuery.button(locator, []))
+    |> click
+  end
+  def click_on(parent, query) do
+    click(parent, query)
   end
 
   # @doc """
@@ -187,12 +254,14 @@ defmodule Wallaby.Browser do
   @spec clear(parent, StatelessQuery.t) :: parent
   @spec clear(Element.t) :: Element.t
 
-  def clear(session, query) when is_binary(query) do
-    session
-    |> find({:fillable_field, query})
+  def clear(parent, locator, opts) when is_binary(locator) do
+    clear(parent, StatelessQuery.fillable_field(locator, opts))
+  end
+  def clear(parent, query) do
+    parent
+    |> find(query)
     |> clear()
   end
-
   def clear(element) do
     {:ok, _} = Driver.clear(element)
     element
@@ -206,14 +275,17 @@ defmodule Wallaby.Browser do
   @spec attach_file(parent, StatelessQuery.t, path: String.t) :: parent
   @spec attach_file(parent, Element.t, path: String.t) :: parent
 
-  def attach_file(parent, locator, [{:path, value} | _]=opts) do
+  def attach_file(parent, locator, [{:path, value} | _]=opts) when is_binary(locator) do
     path = :filename.absname(value)
 
     parent
     |> find(StatelessQuery.file_field(locator, opts))
     |> fill_in(with: path)
-
+  end
+  def attach_file(parent, query, path: path) do
     parent
+    |> find(query)
+    |> fill_in(with: :filename.absname(path))
   end
 
   @doc """
@@ -249,9 +321,26 @@ defmodule Wallaby.Browser do
   """
   @spec get_window_size(parent) :: %{String.t => pos_integer, String.t => pos_integer}
 
+  # TODO: Deprecate
   def get_window_size(session) do
     {:ok, size} = Driver.get_window_size(session)
     size
+  end
+
+  # TODO: Test
+  # TODO: Spec
+  # TODO: Validate errors
+  def window_size(session) do
+    {:ok, size} = Driver.get_window_size(session)
+    size
+  end
+
+  # TODO: Test
+  # TODO: Spec
+  # TODO: Validate errors
+  def resize_window(session, new_size) do
+    {:ok, _} = Driver.set_window_size(session, new_size)
+    session
   end
 
   @doc """
@@ -259,13 +348,21 @@ defmodule Wallaby.Browser do
   """
   @spec get_current_url(parent) :: String.t
 
+  # TODO: Untested
   def get_current_url(session) do
     {:ok, url} = Driver.current_url(session)
     url
   end
 
+  @doc """
+  Gets the current url of the session
+  """
   @spec current_url(parent) :: String.t
-  def current_url(_) do
+
+  # TODO: Untested
+  # TODO: Validate errors
+  def current_url(parent) do
+    Driver.current_url!(parent)
   end
 
   @doc """
@@ -273,13 +370,21 @@ defmodule Wallaby.Browser do
   """
   @spec get_current_path(parent) :: String.t
 
+  # TODO: Untested
+  # TODO: Validate errors
   def get_current_path(session) do
     URI.parse(get_current_url(session)).path
   end
 
+  @doc """
+  Gets the current path of the session
+  """
   @spec current_path(parent) :: String.t
-  def current_path(parent) do
 
+  # TODO: Untested
+  # TODO: Validate errors
+  def current_path(parent) do
+    Driver.current_path!(parent)
   end
 
   @doc """
@@ -287,6 +392,7 @@ defmodule Wallaby.Browser do
   """
   @spec page_title(parent) :: String.t
 
+  # TODO: Validate errors
   def page_title(session) do
     {:ok, title} = Driver.page_title(session)
     title
@@ -298,6 +404,7 @@ defmodule Wallaby.Browser do
   """
   @spec execute_script(parent, String.t, list) :: parent
 
+  # TODO: Validate errors
   def execute_script(session, script, arguments \\ []) do
     {:ok, value} = Driver.execute_script(session, script, arguments)
     value
@@ -318,18 +425,32 @@ defmodule Wallaby.Browser do
   @spec send_keys(parent, list(atom)) :: parent
   @spec send_keys(parent, StatelessQuery.t, list(atom)) :: parent
 
-  def send_keys(session, keys) when is_list(keys) do
-    {:ok, _} = Driver.send_keys(session, keys)
-    session
+  # TODO: untested
+  # TODO: Validate errors
+  def send_keys(parent, query, list) do
+    parent
+    |> find(query)
+    |> click()
+    |> send_keys(list)
+  end
+  def send_keys(parent, keys) when is_list(keys) do
+    {:ok, _} = Driver.send_keys(parent, keys)
+    parent
   end
 
   @doc """
   Sends text characters to the active element
   """
   @spec send_text(parent, String.t) :: parent
-  @spec send_text(Element.t, String.t) :: Element.t
   @spec send_text(parent, StatelessQuery.t, String.t) :: parent
 
+  # TODO: untested
+  def send_text(parent, query, text) do
+    parent
+    |> find(query)
+    |> click()
+    |> send_text(text)
+  end
   def send_text(session, text) do
     {:ok, _} = Driver.send_text(session, text)
     session
@@ -358,34 +479,13 @@ defmodule Wallaby.Browser do
   @spec click(parent, StatelessQuery.t) :: parent
   @spec click(Element.t) :: Element.t
 
+  def click(parent, query) do
+    parent
+    |> find(query)
+    |> click()
+  end
   def click(element) do
     Driver.click(element)
-    element
-  end
-
-  @doc """
-  Checks the element.
-  """
-  @spec check(Element.t) :: Element.t
-  @spec check(parent, StatelessQuery.t) :: parent
-
-  def check(%Element{}=element) do
-    unless checked?(element) do
-      click(element)
-    end
-    element
-  end
-
-  @doc """
-  Marks the element as unchecked.
-  """
-  @spec uncheck(parent, StatelessQuery.t) :: parent
-  @spec uncheck(Element.t) :: Element.t
-
-  def uncheck(%Element{}=element) do
-    if checked?(element) do
-      click(element)
-    end
     element
   end
 
@@ -393,8 +493,15 @@ defmodule Wallaby.Browser do
   Gets the Element's text value.
   """
   @spec text(parent) :: String.t
-  @spec text(Element.t) :: String.t
+  @spec text(parent, StatelessQuery.t) :: String.t
 
+  # TODO: Test this shit
+  # TODO: Validate error handling
+  def text(parent, query) do
+    parent
+    |> find(query)
+    |> text
+  end
   def text(element) do
     case Driver.text(element) do
       {:ok, text} ->
@@ -410,9 +517,16 @@ defmodule Wallaby.Browser do
   @spec attr(parent, StatelessQuery.t, String.t) :: String.t | nil
   @spec attr(Element.t, String.t) :: String.t | nil
 
+  # TODO: Untestested
+  # TODO: raise stale element exception
   def attr(element, name) do
     {:ok, attribute} = Driver.attribute(element, name)
     attribute
+  end
+  def attr(parent, query, name) do
+    parent
+    |> find(query)
+    |> attr(name)
   end
 
   @doc """
@@ -420,12 +534,19 @@ defmodule Wallaby.Browser do
 
   For Checkboxes and Radio buttons it returns the selected option.
   """
-  @spec selected(Element.t) :: String.t
-  @spec selected(parent, StatelessQuery.t) :: String.t
+  @spec selected(Element.t) :: any()
+  @spec selected(parent, StatelessQuery.t) :: any()
 
+  # TODO: Untestested
+  # TODO: raise stale element exception
   def selected(element) do
     {:ok, value} = Driver.selected(element)
     value
+  end
+  def selected(parent, query) do
+    parent
+    |> find(query)
+    |> selected()
   end
 
   @doc """
@@ -434,6 +555,14 @@ defmodule Wallaby.Browser do
   @spec checked?(parent, StatelessQuery.t) :: boolean()
   @spec checked?(Element.t) :: boolean()
 
+  # TODO: Untestested
+  # TODO: raise stale element exception
+  # TODO: Make sure that this actually works for all types
+  def checked?(parent, query) do
+    parent
+    |> find(query)
+    |> checked?
+  end
   def checked?(%Element{}=element) do
     selected(element) == true
   end
@@ -441,9 +570,15 @@ defmodule Wallaby.Browser do
   @doc """
   Checks if the element has been selected. Alias for checked?(element)
   """
-  @spec selected(parent, StatelessQuery.t) :: boolean()
+  @spec selected?(parent, StatelessQuery.t) :: boolean()
   @spec selected?(Element.t) :: boolean()
 
+  # TODO: Untested
+  def selected?(parent, query) do
+    parent
+    |> find(query)
+    |> checked?
+  end
   def selected?(%Element{}=element) do
     checked?(element)
   end
@@ -454,8 +589,14 @@ defmodule Wallaby.Browser do
   @spec visible?(parent, StatelessQuery.t) :: boolean()
   @spec visible?(Element.t) :: boolean()
 
+  # TODO: Untested
   def visible?(%Element{}=element) do
     Driver.displayed!(element)
+  end
+  def visible?(parent, query) do
+    parent
+    |> find(query)
+    |> visible?
   end
 
   @doc """
@@ -467,9 +608,9 @@ defmodule Wallaby.Browser do
 
   Selections can be scoped by providing a Element as the locator for the query.
   """
-  @spec find(parent, locator, opts) :: Element.t
-  @spec find(parent, locator) :: Element.t
-  @spec find(parent, StatelessQuery.t) :: Element.t
+  @spec find(parent, locator, opts) :: [Element.t] | Element.t
+  @spec find(parent, locator) :: [Element.t] | Element.t
+  @spec find(parent, StatelessQuery.t) :: [Element.t] | Element.t
 
   def find(parent, css, opts) when is_binary(css) do
     find(parent, StatelessQuery.css(css, opts))
@@ -509,10 +650,14 @@ defmodule Wallaby.Browser do
   Finds all of the DOM elements that match the css selector. If no elements are
   found then an empty list is immediately returned.
   """
-  @spec all(parent, locator, opts) :: Element.t
-  @spec all(parent, locator) :: Element.t
-  @spec all(parent, StatelessQuery.t) :: Element.t
+  @spec all(parent, locator, opts) :: [Element.t]
+  @spec all(parent, locator) :: [Element.t]
+  @spec all(parent, StatelessQuery.t) :: [Element.t]
 
+  # TODO: Untested
+  def all(parent, locator, opts) when is_binary(locator) do
+    find(parent, StatelessQuery.css(locator, Keyword.merge(opts, [count: nil, minimum: 0])))
+  end
   def all(parent, css) when is_binary(css) do
     find(parent, StatelessQuery.css(css, minimum: 0))
   end
@@ -526,6 +671,12 @@ defmodule Wallaby.Browser do
   @spec has_value?(parent, StatelessQuery.t, any()) :: boolean()
   @spec has_value?(Element.t, any()) :: boolean()
 
+  # TODO: untested
+  def has_value?(parent, query, value) do
+    parent
+    |> find(query)
+    |> has_value?(value)
+  end
   def has_value?(%Element{}=element, value) do
     attr(element, "value") == value
   end
@@ -536,6 +687,11 @@ defmodule Wallaby.Browser do
   @spec assert_text(Element.t, String.t) :: boolean()
   @spec assert_text(parent, StatelessQuery.t, String.t) :: boolean()
 
+  def assert_text(parent, query, text) when is_binary(text) do
+    parent
+    |> find(query)
+    |> assert_text(text)
+  end
   def assert_text(%Element{}=element, text) when is_binary(text) do
     cond do
       has?(element, StatelessQuery.text(text)) -> true
@@ -547,7 +703,7 @@ defmodule Wallaby.Browser do
   Validates that the query returns a result. This can be used to define other
   types of matchers.
   """
-  @spec has?(parent, StatelessQuery.t) :: type
+  @spec has?(parent, StatelessQuery.t) :: boolean()
 
   def has?(parent, query) do
     case execute_query(parent, query) do
@@ -562,12 +718,14 @@ defmodule Wallaby.Browser do
   @spec has_text?(Element.t, String.t) :: boolean()
   @spec has_text?(parent, StatelessQuery.t, String.t) :: boolean()
 
+  # TODO: Untested
+  def has_text?(parent, query, text) do
+    parent
+    |> find(query)
+    |> has_text?(text)
+  end
   def has_text?(%Element{}=element, text) when is_binary(text) do
-    try do
-      assert_text(element, text)
-    rescue
-      _e in Wallaby.ExpectationNotMet -> false
-    end
+    has?(element, StatelessQuery.text(text))
   end
 
   @doc """
@@ -576,9 +734,15 @@ defmodule Wallaby.Browser do
   @spec has_css?(parent, StatelessQuery.t, String.t) :: boolean()
   @spec has_css?(parent, locator) :: boolean()
 
+  # TODO: Untested
+  def has_css?(parent, query, css) when is_binary(css) do
+    parent
+    |> find(query)
+    |> has?(StatelessQuery.css(css, count: :any))
+  end
   def has_css?(parent, css) when is_binary(css) do
     parent
-    |> Wallaby.Browser.find(Wallaby.StatelessQuery.css(css, count: :any))
+    |> find(Wallaby.StatelessQuery.css(css, count: :any))
     |> Enum.any?
   end
 
@@ -588,10 +752,15 @@ defmodule Wallaby.Browser do
   @spec has_no_css?(parent, StatelessQuery.t, String.t) :: boolean()
   @spec has_no_css?(parent, locator) :: boolean()
 
+  # TODO: Untested
+  def has_no_css?(parent, query, css) when is_binary(css) do
+    parent
+    |> find(query)
+    |> has?(StatelessQuery.css(css, count: 0))
+  end
   def has_no_css?(parent, css) when is_binary(css) do
     parent
-    |> Wallaby.Browser.find(Wallaby.StatelessQuery.css(css, count: 0))
-    |> Enum.empty?
+    |> has?(StatelessQuery.css(css, count: 0))
   end
 
   @doc """
